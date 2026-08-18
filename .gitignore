@@ -1,16 +1,21 @@
 # Dependencies
 node_modules/
+packages/*/node_modules/
 package-lock.json.bak
 
 # Build output
 dist/
+packages/*/dist/
 *.tsbuildinfo
+packages/*/*.tsbuildinfo
 
 # Environment variables
 .env
-.env.example
 .env.local
 .env.*.local
+packages/*/.env
+packages/*/.env.local
+packages/*/.env.*.local
 
 # Logs
 npm-debug.log*
@@ -18,7 +23,7 @@ yarn-debug.log*
 yarn-error.log*
 *.log
 
-# OS metadata
+# OS & Editor metadata
 .DS_Store
 Thumbs.db
 .idea/

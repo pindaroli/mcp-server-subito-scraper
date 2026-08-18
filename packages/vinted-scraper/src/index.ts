@@ -4,8 +4,9 @@ import 'dotenv/config';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { registerTools } from './tools.js';
+import { registerHardwarePrompt } from 'shared-mcp-utils';
 
-const SERVER_NAME = 'mcp-server-subito-scraper';
+const SERVER_NAME = 'mcp-server-vinted-scraper';
 const SERVER_VERSION = '1.0.0';
 
 /**
@@ -18,10 +19,10 @@ function parseArgs(): void {
 
     if (arg === '--help' || arg === '-h') {
       console.error(`
-Subito.it MCP Server (via Apify Actor azzouzana/subito-scraper-pro-by-search-url)
+Vinted MCP Server (via Apify Actor automation-lab/vinted-scraper)
 
 Usage:
-  npx mcp-server-subito-scraper [options]
+  npx mcp-server-vinted-scraper [options]
 
 Options:
   -t, --token <token>         Apify API token (or set APIFY_TOKEN / APIFY_API_TOKEN env var)
@@ -33,12 +34,16 @@ Environment Variables:
   APIFY_TOKEN                 Apify API token
   APIFY_API_TOKEN             Alternative environment variable for Apify API token
 
+Supported Domains:
+  vinted.it (Italy), vinted.fr (France), vinted.de (Germany), vinted.es (Spain),
+  vinted.co.uk (UK), vinted.com (US), vinted.nl (Netherlands), vinted.be (Belgium)
+
 Example MCP Client Configuration:
   {
     "mcpServers": {
-      "subito": {
+      "vinted": {
         "command": "npx",
-        "args": ["-y", "mcp-server-subito-scraper"],
+        "args": ["-y", "mcp-server-vinted-scraper"],
         "env": {
           "APIFY_TOKEN": "your_apify_api_token_here"
         }
@@ -80,11 +85,14 @@ async function main(): Promise<void> {
   // Register MCP tools
   registerTools(server);
 
+  // Register hardware verification prompt
+  registerHardwarePrompt(server.server);
+
   // Connect to stdio transport
   const transport = new StdioServerTransport();
   await server.connect(transport);
 
-  console.error(`[${SERVER_NAME}] Server running on stdio transport (Apify Actor: azzouzana/subito-scraper-pro-by-search-url)`);
+  console.error(`[${SERVER_NAME}] Server running on stdio transport (Apify Actor: automation-lab/vinted-scraper)`);
 }
 
 main().catch((error) => {

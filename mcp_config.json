@@ -2,9 +2,18 @@
   "mcpServers": {
     "subito-scraper": {
       "command": "node",
-      "args": ["${workspaceFolder}/dist/index.js"],
+      "args": ["${workspaceFolder}/packages/subito-scraper/dist/index.js"],
       "env": {
-        "APIFY_TOKEN": "${env:APIFY_TOKEN}"
+        "APIFY_TOKEN": "${env:APIFY_TOKEN}",
+        "HARDWARE_RULES_FILE": "${workspaceFolder}/hardware_rules.json"
+      }
+    },
+    "vinted-scraper": {
+      "command": "node",
+      "args": ["${workspaceFolder}/packages/vinted-scraper/dist/index.js"],
+      "env": {
+        "APIFY_TOKEN": "${env:APIFY_TOKEN}",
+        "HARDWARE_RULES_FILE": "${workspaceFolder}/hardware_rules.json"
       }
     }
   }
