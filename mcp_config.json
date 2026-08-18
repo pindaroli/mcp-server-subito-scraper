@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "subito-scraper": {
+      "command": "node",
+      "args": ["${workspaceFolder}/dist/index.js"],
+      "env": {
+        "APIFY_TOKEN": "${env:APIFY_TOKEN}"
+      }
+    }
+  }
+}

@@ -18,6 +18,7 @@
     "build": "tsc && chmod +x dist/index.js",
     "watch": "tsc --watch",
     "test": "tsx test/smoke-test.ts",
+    "test:mcp": "npm run build && tsx test/test-mcp-client.ts",
     "start": "node dist/index.js",
     "dev": "tsx src/index.ts",
     "prepublishOnly": "npm run build"
