@@ -50,9 +50,12 @@ export function getApifyClient(token?: string): ApifyClient {
 export async function runSubitoScraper(options: ScrapeSubitoOptions): Promise<ApifyRunResult> {
   const client = getApifyClient(options.token);
 
+  const requestedLimit = options.maxItems ?? 30;
+  const actorMaxItems = Math.max(10, requestedLimit);
+
   const actorInput: Record<string, unknown> = {
     searchUrl: options.searchUrl,
-    maxItems: options.maxItems ?? 50
+    maxItems: actorMaxItems
   };
 
   const runOptions: { timeout?: number; memory?: number; waitSecs?: number } = {};
@@ -73,15 +76,17 @@ export async function runSubitoScraper(options: ScrapeSubitoOptions): Promise<Ap
 
   // Fetch the dataset items
   const { items, total } = await client.dataset(run.defaultDatasetId).listItems({
-    limit: options.maxItems ?? 100
+    limit: requestedLimit
   });
+
+  const slicedItems = (items as Record<string, unknown>[]).slice(0, requestedLimit);
 
   return {
     runId: run.id,
     status: run.status,
     defaultDatasetId: run.defaultDatasetId,
     itemsCount: total ?? items.length,
-    items: items as Record<string, unknown>[],
+    items: slicedItems,
     datasetUrl: `https://console.apify.com/storage/datasets/${run.defaultDatasetId}`,
     actorUrl: `https://apify.com/${SUBITO_ACTOR_ID}`
   };

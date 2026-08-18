@@ -19,19 +19,47 @@ function formatItemsMarkdown(items: Record<string, unknown>[]): string {
 
   return items
     .map((item, index) => {
-      const title = (item.title as string) || (item.name as string) || `Annuncio #${index + 1}`;
-      const price = item.price ? `💶 **Prezzo:** ${item.price}` : '💶 **Prezzo:** N/D';
-      const location = (item.location as string) || (item.geo as string) || (item.town as string) || '';
-      const url = (item.url as string) || (item.link as string) || '';
+      const title =
+        (item.subject as string) ||
+        (item.title as string) ||
+        (item.name as string) ||
+        `Annuncio #${index + 1}`;
+
+      const rawPrice =
+        (item.features_price_values as string) ||
+        (item.price as string) ||
+        (item.price_value as string);
+      const price = rawPrice ? `💶 **Prezzo:** ${rawPrice}` : '💶 **Prezzo:** N/D';
+
+      const town = (item.geo_town_value as string) || (item.geo_city_value as string) || '';
+      const province = (item.geo_city_shortName as string) || '';
+      const region = (item.geo_region_value as string) || '';
+      const locationParts = [town, province ? `(${province})` : '', region].filter(Boolean);
+      const location = locationParts.join(' ') || (item.location as string) || (item.geo as string) || '';
+
+      const url =
+        (item.urls_default as string) ||
+        (item.urls_mobile as string) ||
+        (item.url as string) ||
+        (item.link as string) ||
+        '';
+
       const date = (item.date as string) || (item.publishedAt as string) || '';
-      const advertiser = (item.advertiser_name as string) || (item.seller as string) || '';
+      const condition = (item.features_item_condition_values as string) || '';
+      const shipping = (item.features_item_shipping_type_values as string) || '';
+      const advertiser =
+        (item.advertiser_name as string) ||
+        (item.seller as string) ||
+        (item.advertiser_userId ? `ID: ${item.advertiser_userId}` : '');
       const phone = (item.phone as string) || (item.telephone as string) || '';
       const email = (item.email as string) || '';
-      const description = (item.description as string) || (item.body as string) || '';
+      const description = (item.body as string) || (item.description as string) || '';
 
       const details: string[] = [];
       if (price) details.push(price);
       if (location) details.push(`📍 **Luogo:** ${location}`);
+      if (condition) details.push(`✨ **Condizione:** ${condition}`);
+      if (shipping) details.push(`📦 **Spedizione:** ${shipping}`);
       if (date) details.push(`🕒 **Data:** ${date}`);
       if (advertiser) details.push(`👤 **Venditore:** ${advertiser}`);
       if (phone) details.push(`📞 **Telefono:** ${phone}`);
@@ -40,7 +68,7 @@ function formatItemsMarkdown(items: Record<string, unknown>[]): string {
 
       let formatted = `### ${index + 1}. ${title}\n` + details.join(' | ') + '\n';
       if (description) {
-        const shortDesc = description.length > 200 ? description.substring(0, 200) + '...' : description;
+        const shortDesc = description.length > 250 ? description.substring(0, 250) + '...' : description;
         formatted += `\n> ${shortDesc.replace(/\n+/g, ' ')}\n`;
       }
       return formatted;
