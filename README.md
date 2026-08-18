@@ -160,7 +160,7 @@ Se desideri clonare e modificare il server localmente:
 
 ```bash
 # 1. Clona il repository
-git clone https://github.com/olindo/mcp-server-subito-scraper.git
+git clone https://github.com/pindaroli/mcp-server-subito-scraper.git
 cd mcp-server-subito-scraper
 
 # 2. Installa le dipendenze
