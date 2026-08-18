@@ -4,6 +4,7 @@ import {
   runSubitoScraper,
   getDatasetItems,
   checkApifyStatus,
+  formatApifyError,
   SUBITO_ACTOR_ID
 } from './apify.js';
 import { buildSubitoSearchUrl } from './url-builder.js';
@@ -102,13 +103,12 @@ export function registerTools(server: McpServer): void {
           ]
         };
       } catch (error) {
-        const errMessage = error instanceof Error ? error.message : String(error);
         return {
           isError: true,
           content: [
             {
               type: 'text',
-              text: `Errore durante l'esecuzione dello scraping su Subito.it: ${errMessage}`
+              text: formatApifyError(error)
             }
           ]
         };
@@ -222,13 +222,12 @@ export function registerTools(server: McpServer): void {
           ]
         };
       } catch (error) {
-        const errMessage = error instanceof Error ? error.message : String(error);
         return {
           isError: true,
           content: [
             {
               type: 'text',
-              text: `Errore durante la ricerca su Subito.it: ${errMessage}`
+              text: formatApifyError(error)
             }
           ]
         };
@@ -264,13 +263,12 @@ export function registerTools(server: McpServer): void {
           ]
         };
       } catch (error) {
-        const errMessage = error instanceof Error ? error.message : String(error);
         return {
           isError: true,
           content: [
             {
               type: 'text',
-              text: `Errore durante il recupero del dataset ${datasetId}: ${errMessage}`
+              text: formatApifyError(error)
             }
           ]
         };
@@ -297,13 +295,12 @@ export function registerTools(server: McpServer): void {
           ]
         };
       } catch (error) {
-        const errMessage = error instanceof Error ? error.message : String(error);
         return {
           isError: true,
           content: [
             {
               type: 'text',
-              text: `❌ Connessione ad Apify fallita: ${errMessage}`
+              text: formatApifyError(error)
             }
           ]
         };

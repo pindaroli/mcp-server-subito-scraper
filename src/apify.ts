@@ -1,4 +1,4 @@
-import { ApifyClient } from 'apify-client';
+import { ApifyClient, ApifyApiError } from 'apify-client';
 
 export const SUBITO_ACTOR_ID = 'azzouzana/subito-scraper-pro-by-search-url';
 
@@ -123,4 +123,75 @@ export async function checkApifyStatus(token?: string): Promise<Record<string, u
     isPaying: user?.isPaying,
     proxyCredits: user?.proxy
   };
+}
+
+/**
+ * Formats an Apify or network error into an actionable diagnostic message with troubleshooting steps
+ */
+export function formatApifyError(error: unknown): string {
+  if (!error) return 'Errore sconosciuto.';
+
+  // Check if it's an ApifyApiError
+  if (error instanceof ApifyApiError) {
+    const status = error.statusCode;
+    const type = error.type || '';
+    const msg = error.message || '';
+
+    if (status === 401 || type.includes('token') || type.includes('unauthorized')) {
+      return (
+        `🔴 **DIAGNOSTICA: Token Apify non valido o non autorizzato (HTTP 401)**\n` +
+        `- **Dettaglio:** ${msg || 'Il token specificato non è stato riconosciuto dai server di Apify.'}\n` +
+        `💡 **Come risolvere:**\n` +
+        `  1. Accedi alla console di Apify: https://console.apify.com/settings/integrations\n` +
+        `  2. Genera o copia il tuo **Personal API Token** (inizia con \`apify_api_...\`).\n` +
+        `  3. Inseriscilo nel file \`.env\` come \`APIFY_TOKEN=tuo_token\` o configuralo nelle impostazioni MCP.`
+      );
+    }
+
+    if (status === 402 || type.includes('payment') || type.includes('insufficient') || type.includes('limit')) {
+      return (
+        `🔴 **DIAGNOSTICA: Crediti Apify esauriti o limite di spesa raggiunto (HTTP 402)**\n` +
+        `- **Dettaglio:** ${msg || 'Il tuo account Apify ha esaurito i crediti disponibili per eseguire questo Actor.'}\n` +
+        `💡 **Come risolvere:**\n` +
+        `  1. Verifica il saldo crediti o il piano attivo su: https://console.apify.com/billing\n` +
+        `  2. L'Actor \`azzouzana/subito-scraper-pro-by-search-url\` applica una tariffa pay-per-event ($1 / 1.000 annunci). Assicurati di avere crediti residui o un piano attivo.`
+      );
+    }
+
+    if (status === 429 || type.includes('rate-limit')) {
+      return (
+        `🔴 **DIAGNOSTICA: Troppe richieste / Rate limit superato (HTTP 429)**\n` +
+        `- **Dettaglio:** ${msg || 'Hai superato il numero massimo di richieste al secondo o le esecuzioni contemporanee consentite.'}\n` +
+        `💡 **Come risolvere:**\n` +
+        `  1. Attendi 1 o 2 minuti prima di rilanciare la ricerca.\n` +
+        `  2. Sul piano gratuito Apify c'è un intervallo minimo di 1 minuto tra le esecuzioni.`
+      );
+    }
+
+    if (status === 404) {
+      return (
+        `🔴 **DIAGNOSTICA: Risorsa non trovata (HTTP 404)**\n` +
+        `- **Dettaglio:** ${msg || `L'Actor \`${SUBITO_ACTOR_ID}\` o il dataset richiesto non esiste.`}`
+      );
+    }
+
+    return (
+      `🔴 **DIAGNOSTICA: Errore API Apify (HTTP ${status} - ${type || 'Errore'})**\n` +
+      `- **Dettaglio:** ${msg}`
+    );
+  }
+
+  const message = error instanceof Error ? error.message : String(error);
+
+  if (message.includes('token is missing') || message.includes('APIFY_TOKEN')) {
+    return (
+      `🔴 **DIAGNOSTICA: Token Apify non configurato**\n` +
+      `- **Dettaglio:** Nessun token API è stato trovato nelle variabili d'ambiente o nei parametri.\n` +
+      `💡 **Come risolvere:**\n` +
+      `  1. Crea un file \`.env\` nel progetto con il contenuto: \`APIFY_TOKEN=il_tuo_token_apify\`\n` +
+      `  2. Oppure passa il token direttamente come parametro nel tool.`
+    );
+  }
+
+  return `🔴 **DIAGNOSTICA: Errore durante l'operazione:**\n- **Dettaglio:** ${message}`;
 }
