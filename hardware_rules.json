@@ -1,4 +1,5 @@
 {
+  "max_visual_inspections": 20,
   "global_instructions": [
     "1. ANALISI DEL CORPO DEL TESTO: Estrai tutte le informazioni tecniche, descrizioni e note dal corpo dell'annuncio, senza limitarti al titolo (spesso incompleto, generico o errato).",
     "2. VERIFICA FOTOGRAFICA & SERIALI: Ispeziona attentamente tutte le immagini allegate cercando l'etichetta del produttore per individuare il Part Number (P/N), modello esatto e numero seriale.",

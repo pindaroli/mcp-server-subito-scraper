@@ -1,0 +1,10 @@
+{
+  "max_visual_inspections": 20,
+  "global_instructions": [
+    "1. ANALISI DEL CORPO DEL TESTO: Estrai tutte le informazioni tecniche, descrizioni e note dal corpo dell'annuncio, senza limitarti al titolo (spesso incompleto, generico o errato).",
+    "2. VERIFICA FOTOGRAFICA & SERIALI: Ispeziona attentamente tutte le immagini allegate cercando l'etichetta del produttore per individuare il Part Number (P/N), modello esatto e numero seriale.",
+    "3. DECODIFICA & CONFERMA DATASHEET: Verifica la sigla/P/N identificato confrontandolo con i pattern ufficiali del produttore per confermare form-factor reale (es. DIMM vs SO-DIMM), frequenza, timing, tensione e capacità effettiva per modulo/kit.",
+    "4. POLITICA 'ZERO ASSUNZIONI': Se le fotografie sono sfuocate, il prodotto è chiuso in scatola generica senza etichetta leggibile, o mancano prove inequivocabili del codice esatto, SCARTA categoricamente l'annuncio.",
+    "5. REPORT STRUTTURATO: Genera una tabella Markdown finale con: Prezzo, Prezzo Unitario (es. €/GB), Condizione, Part Number verificato da etichetta/testo e Link diretto."
+  ]
+}

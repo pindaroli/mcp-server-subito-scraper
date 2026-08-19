@@ -1,0 +1,5 @@
+{
+  "name": "Alimentatore SFX / SFX-L",
+  "description": "Alimentatori compatti per case Small Form Factor (SFF)",
+  "rules": "FORM FACTOR:\n- ACCETTA: Alimentatori in standard SFX (125 x 100 x 63.5 mm) o SFX-L (125 x 125 x 63.5 mm).\n- SCARTA: Alimentatori ATX standard (150 x 140/160 x 86 mm) e formati proprietari/TFX/Flex-ATX se non richiesti."
+}

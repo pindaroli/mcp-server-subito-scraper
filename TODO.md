@@ -65,3 +65,23 @@ Passare dalla modalità di sviluppo/debug locale (percorsi assoluti nel monorepo
 
 - [ ] **5. Aggiornamento Documentazione e Template Client MCP:**
   - Aggiornare i README con le istruzioni di configurazione standard `npx` per tutti i client MCP supportati (Claude Desktop, Antigravity, Cursor, Cline/Roo Code).
+
+---
+
+## 🚀 Fase 3: Generalizzazione Oltre l'Hardware (Es. Software e Videogiochi)
+
+### 🎯 Obiettivo
+Adattare l'architettura attuale (focalizzata su `hardware_rules` e `hardware_expert_search`) per renderla agnostica rispetto al dominio, permettendo di validare anche categorie non hardware come software, videogiochi fisici o licenze digitali.
+
+### 📋 Piano di Astrazione
+1. **Rinominare e Astrarre i Tool MCP:**
+   - Sostituire il concetto di `hardware_expert_search` con un più generico `vinted_expert_reviewer` o `item_validation_search`.
+   - Modificare la struttura delle directory di regole da `.agents/hardware_rules/` a `.agents/validation_rules/`.
+2. **Aggiornamento del Semantic Router (Skill):**
+   - Evolvere la Skill `hardware-router` in un router generico (es. `vinted-expert-router`).
+   - Istruire l'LLM a distinguere il macro-dominio (Hardware vs Software vs Abbigliamento) e richiedere all'MCP server le regole appropriate.
+3. **Introduzione di `software.json`:**
+   - Creare un nuovo modulo di regole con la "Politica Zero Assunzioni" specifica per il software. Esempi di regole:
+     - Scartare chiavi digitali (Product Key) inviate via chat per rischio truffa.
+     - Verificare se un gioco per PC (recente) richiede l'attivazione obbligatoria su piattaforme come Steam/Epic, pretendendo prove che la scatola sia sigillata.
+     - Ispezionare visivamente la presenza del disco/cartuccia o del sigillo olografico originale nelle custodie console.

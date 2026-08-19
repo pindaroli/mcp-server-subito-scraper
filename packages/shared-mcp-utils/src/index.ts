@@ -1,6 +1,6 @@
 import fs from 'fs';
-import { fileURLToPath } from 'url';
 import path from 'path';
+import { fileURLToPath } from 'url';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 
@@ -10,110 +10,136 @@ export interface ComponentRule {
   rules: string;
 }
 
-export interface HardwareRulesConfig {
+export interface GlobalInstructions {
+  max_visual_inspections?: number;
   global_instructions?: string[] | string;
-  components: Record<string, string | ComponentRule>;
 }
 
-/**
- * Normalizes raw JSON object into HardwareRulesConfig
- */
-function normalizeConfig(raw: Record<string, unknown>): HardwareRulesConfig {
-  if (raw && typeof raw === 'object' && ('components' in raw || 'global_instructions' in raw)) {
-    return {
-      global_instructions: (raw.global_instructions as string[] | string) || [],
-      components: (raw.components as Record<string, string | ComponentRule>) || {}
-    };
-  }
-
-  // Backward-compatibility: if the JSON is flat key-value
-  return {
-    global_instructions: [],
-    components: (raw as Record<string, string>) || {}
-  };
-}
-
-/**
- * Loads default rules from default_hardware_rules.json
- */
-function loadDefaultRules(): HardwareRulesConfig {
+function getRulesDir(subPath: string): string {
   const currentDir = path.dirname(fileURLToPath(import.meta.url));
-  const candidatePaths = [
-    path.join(currentDir, 'default_hardware_rules.json'),
-    path.join(currentDir, '../src/default_hardware_rules.json'),
-    path.join(process.cwd(), 'hardware_rules.json')
-  ];
-
-  for (const p of candidatePaths) {
-    if (fs.existsSync(p)) {
-      try {
-        const content = fs.readFileSync(p, 'utf8');
-        return normalizeConfig(JSON.parse(content));
-      } catch (err) {
-        console.error(`[MCP Shared] Errore lettura regole da ${p}:`, err);
-      }
-    }
-  }
-
-  return { components: {} };
+  return path.join(currentDir, subPath);
 }
 
-export function loadHardwareRules(): HardwareRulesConfig {
-  const customPath = process.env.HARDWARE_RULES_FILE;
-  
-  if (customPath) {
+function getOverrideDir(): string | null {
+  if (process.env.HARDWARE_RULES_DIR) {
+    return process.env.HARDWARE_RULES_DIR;
+  }
+  const agentsDir = path.join(process.cwd(), '.agents', 'hardware_rules');
+  if (fs.existsSync(agentsDir)) {
+    return agentsDir;
+  }
+  return null;
+}
+
+function readJsonFile(filePath: string): any {
+  if (fs.existsSync(filePath)) {
     try {
-      if (fs.existsSync(customPath)) {
-        const fileContent = fs.readFileSync(customPath, 'utf8');
-        console.error(`[MCP Shared] Regole hardware caricate con successo da: ${customPath}`);
-        return normalizeConfig(JSON.parse(fileContent));
-      } else {
-        console.error(`[MCP Shared] ATTENZIONE: Il file specificato in HARDWARE_RULES_FILE (${customPath}) non esiste. Uso regole di default.`);
-      }
-    } catch (error) {
-      console.error(`[MCP Shared] ERRORE durante il parsing del file ${customPath}:`, error);
-      console.error(`[MCP Shared] Fallback sulle regole di default.`);
+      const content = fs.readFileSync(filePath, 'utf8');
+      return JSON.parse(content);
+    } catch (err) {
+      console.error(`[MCP Shared] Errore parsing JSON da ${filePath}:`, err);
     }
   }
+  return null;
+}
+
+function getGlobalInstructions(): GlobalInstructions {
+  let instructions: GlobalInstructions | null = null;
+  const overrideDir = getOverrideDir();
   
-  return loadDefaultRules();
+  if (overrideDir) {
+    instructions = readJsonFile(path.join(overrideDir, 'global_instructions.json'));
+  }
+  if (!instructions) {
+    instructions = readJsonFile(getRulesDir('rules/global_instructions.json')) || readJsonFile(getRulesDir('../src/rules/global_instructions.json'));
+  }
+  
+  return instructions || { global_instructions: [] };
+}
+
+function getComponentRule(moduleId: string): ComponentRule | null {
+  const filename = `${moduleId}.json`;
+  const overrideDir = getOverrideDir();
+  
+  if (overrideDir) {
+    const rule = readJsonFile(path.join(overrideDir, filename));
+    if (rule) return rule;
+  }
+  
+  let rule = readJsonFile(getRulesDir(`rules/${filename}`));
+  if (!rule) rule = readJsonFile(getRulesDir(`../src/rules/${filename}`));
+  
+  return rule;
+}
+
+function listAvailableModules(): Record<string, string> {
+  const modules: Record<string, string> = {};
+  
+  const scanDir = (dirPath: string) => {
+    if (fs.existsSync(dirPath)) {
+      const files = fs.readdirSync(dirPath);
+      for (const file of files) {
+        if (file.endsWith('.json') && file !== 'global_instructions.json') {
+          const moduleId = file.replace('.json', '');
+          const rule = readJsonFile(path.join(dirPath, file)) as ComponentRule;
+          if (rule && rule.name) {
+            modules[moduleId] = `${rule.name} - ${rule.description || ''}`;
+          }
+        }
+      }
+    }
+  };
+
+  scanDir(getRulesDir('rules'));
+  scanDir(getRulesDir('../src/rules'));
+  
+  const overrideDir = getOverrideDir();
+  if (overrideDir) {
+    scanDir(overrideDir);
+  }
+
+  return modules;
 }
 
 export function registerHardwarePrompt(server: McpServer) {
-  const config = loadHardwareRules();
-  const componentKeys = Object.keys(config.components);
+  server.tool(
+    "get_available_hardware_rules",
+    "Restituisce la lista dei moduli di regole hardware disponibili per il Semantic Router",
+    {},
+    async () => {
+      const modules = listAvailableModules();
+      return {
+        content: [{ type: "text", text: JSON.stringify(modules, null, 2) }]
+      };
+    }
+  );
 
-  server.registerPrompt(
+  server.prompt(
     "hardware_expert_search",
+    "Ricerca hardware applicando rigide regole di validazione 'Zero Assunzioni'.",
     {
-      title: "Hardware Expert Search",
-      description: "Ricerca hardware applicando rigide regole di validazione 'Zero Assunzioni'.",
-      argsSchema: {
-        component: z.string().describe(`Categoria componente (Supportati: ${componentKeys.join(', ')})`)
-      }
+      rule_module_id: z.string().describe("L'ID del modulo delle regole da applicare (es. 'ram'). Ottienilo tramite get_available_hardware_rules."),
+      user_target_specs: z.string().optional().describe("Le specifiche esatte fornite dall'utente (es. 'DDR5 SO-DIMM Kingston'). Verranno iniettate nelle regole per verifiche mirate.")
     },
     async (args) => {
-      const component = args.component;
+      const moduleId = args.rule_module_id;
+      const targetSpecs = args.user_target_specs || "Non specificato";
+      const globalInst = getGlobalInstructions();
+      const compRule = getComponentRule(moduleId);
       
-      let specificRules = "Nessuna regola specifica trovata nel database. Usa cautela estrema e controlla attentamente sigle ed etichette.";
-      if (component && typeof component === 'string' && config.components[component]) {
-        const compVal = config.components[component];
-        if (typeof compVal === 'string') {
-          specificRules = compVal;
-        } else if (compVal && typeof compVal === 'object' && compVal.rules) {
-          specificRules = `[${compVal.name || component} - ${compVal.description || ''}]\n${compVal.rules}`;
-        }
+      let specificRules = "Nessuna regola specifica trovata nel database. Assumere comportamento bloccante e usare massima cautela.";
+      if (compRule) {
+        specificRules = `[${compRule.name || moduleId} - ${compRule.description || ''}]\n${compRule.rules}`;
+        specificRules = specificRules.replace(/\{\{user_target_specs\}\}/g, targetSpecs);
       }
 
       let globalInstructionsText = '';
-      if (config.global_instructions) {
-        if (Array.isArray(config.global_instructions)) {
-          globalInstructionsText = config.global_instructions.join('\n');
+      if (globalInst.global_instructions) {
+        if (Array.isArray(globalInst.global_instructions)) {
+          globalInstructionsText = globalInst.global_instructions.join('\n');
         } else {
-          globalInstructionsText = config.global_instructions;
+          globalInstructionsText = globalInst.global_instructions;
         }
-      } else {
-        globalInstructionsText = `1. ANALISI DEL CORPO DEL TESTO: Estrai tutte le informazioni tecniche dal corpo dell'annuncio.\n2. VERIFICA FOTOGRAFICA & SERIALI: Ispeziona le etichette nelle foto per Part Number e seriali.\n3. POLITICA 'ZERO ASSUNZIONI': Se le foto sono sfocate o mancano prove certe, scarta l'annuncio.\n4. Genera una tabella Markdown con dettagli tecnici verificati.`;
       }
       
       return {
@@ -130,7 +156,7 @@ Applicherai la Politica "Zero Assunzioni": scarta le inserzioni basandoti sulle 
 ${globalInstructionsText}
 
 ==================================================
-🎯 REGOLE SPECIFICHE PER [${component || 'sconosciuto'}]:
+🎯 REGOLE SPECIFICHE PER [${moduleId}]:
 ==================================================
 ${specificRules}
 `

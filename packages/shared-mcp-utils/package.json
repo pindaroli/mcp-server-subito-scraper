@@ -6,7 +6,7 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "tsc && cp src/default_hardware_rules.json dist/ || true",
+    "build": "tsc && cp -r src/rules dist/rules || true",
     "watch": "tsc -w",
     "clean": "rm -rf dist tsconfig.tsbuildinfo"
   },
