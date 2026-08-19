@@ -151,6 +151,16 @@ export function registerHardwarePrompt(server: McpServer) {
 Applicherai la Politica "Zero Assunzioni": scarta le inserzioni basandoti sulle seguenti direttive.
 
 ==================================================
+🛠️ ISTRUZIONI OPERATIVE PER L'AGENTE:
+==================================================
+1. Estrai gli URL delle immagini (\`imageUrl\`) dai risultati della ricerca Vinted/Subito.
+2. Usa il tuo strumento per eseguire comandi shell (es. \`run_command\`) per scaricare le immagini in locale usando \`curl\`.
+   Esempio: \`mkdir -p /tmp/hardware_review && curl -sL "URL" -o /tmp/hardware_review/img1.webp\`
+3. Usa il tuo strumento per visualizzare i file scaricati (es. \`view_file\`).
+4. Analizza le immagini applicando rigorosamente le Regole Globali e Specifiche qui sotto.
+5. Formula la tua risposta finale all'utente mostrando una tabella con i risultati ACCETTATI e SCARTATI, motivando la scelta in base all'ispezione visiva.
+
+==================================================
 📋 ISTRUZIONI GLOBALI DI REVISIONE:
 ==================================================
 ${globalInstructionsText}

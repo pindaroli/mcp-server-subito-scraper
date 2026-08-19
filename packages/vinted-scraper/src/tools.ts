@@ -97,7 +97,7 @@ export function registerTools(server: McpServer): void {
   // 1. Tool: Search Vinted by query and filters
   server.tool(
     'vinted_search',
-    'Searches Vinted for secondhand clothes, shoes, bags, and items across European domains using Apify Actor (automation-lab/vinted-scraper)',
+    'Searches Vinted for secondhand clothes, shoes, bags, and items across European domains using Apify Actor (automation-lab/vinted-scraper). CRITICAL: Se l\'utente sta cercando componenti hardware (es. RAM, GPU, Schede Madri), dopo aver ottenuto i risultati DEVI CHIAMARE IL PROMPT "hardware_expert_search", scaricare le foto in locale e applicare rigorosamente le regole visive prima di rispondere.',
     {
       searchQuery: z
         .string()

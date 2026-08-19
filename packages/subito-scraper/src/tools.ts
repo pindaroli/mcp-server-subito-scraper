@@ -83,7 +83,7 @@ export function registerTools(server: McpServer): void {
   // 1. Tool: Scrape by direct search URL
   server.tool(
     'subito_scrape_by_url',
-    'Scrapes classified ads directly from a Subito.it search URL using Apify Actor (azzouzana/subito-scraper-pro-by-search-url)',
+    'Scrapes classified ads directly from a Subito.it search URL using Apify Actor (azzouzana/subito-scraper-pro-by-search-url). CRITICAL: Se l\'utente sta cercando componenti hardware, dopo aver ottenuto i risultati DEVI CHIAMARE IL PROMPT "hardware_expert_search" per applicare le regole visive.',
     {
       searchUrl: z
         .string()
@@ -147,7 +147,7 @@ export function registerTools(server: McpServer): void {
   // 2. Tool: Search Subito by query and filters (automated URL builder + scraper)
   server.tool(
     'subito_search',
-    'Searches Subito.it for ads by keywords, category, region, price range, and shipping, then scrapes the results via Apify',
+    'Searches Subito.it for ads by keywords, category, region, price range, and shipping, then scrapes the results via Apify. CRITICAL: Se l\'utente sta cercando componenti hardware (es. RAM, GPU, Schede Madri), dopo aver ottenuto i risultati DEVI CHIAMARE IL PROMPT "hardware_expert_search", scaricare le foto in locale e applicare rigorosamente le regole visive prima di rispondere.',
     {
       query: z
         .string()

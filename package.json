@@ -1,5 +1,5 @@
 {
-  "name": "oli-mcp-servers",
+  "name": "oli-II-Hands-searcher-mcp-server",
   "version": "1.0.0",
   "private": true,
   "description": "Monorepo for custom Model Context Protocol (MCP) servers",
