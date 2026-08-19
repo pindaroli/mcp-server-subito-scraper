@@ -1,5 +1,26 @@
 {
-  "ram_ddr5": "NO SODIMM: Solo moduli lunghi DIMM/UDIMM Desktop (288 pin).\nPART NUMBER: SK Hynix HMCG78 (OK), HMCG66 (NO). Samsung M378 (OK), M425 (NO).",
-  "matx_motherboard": "FORM FACTOR: Cerca mATX o Micro-ATX (fino a 244 x 244 mm, max 4 slot PCIe).\nSCARTA: Mini-ITX (troppo piccole, 2 slot RAM) e ATX standard.",
-  "psu_sfx": "FORM FACTOR: Cerca sigla SFX (125x100x63.5mm). Attenzione alla variante SFX-L.\nSCARTA: Alimentatori ATX standard."
+  "global_instructions": [
+    "1. ANALISI DEL CORPO DEL TESTO: Estrai tutte le informazioni tecniche, descrizioni e note dal corpo dell'annuncio, senza limitarti al titolo (spesso incompleto, generico o errato).",
+    "2. VERIFICA FOTOGRAFICA & SERIALI: Ispeziona attentamente tutte le immagini allegate cercando l'etichetta del produttore per individuare il Part Number (P/N), modello esatto e numero seriale.",
+    "3. DECODIFICA & CONFERMA DATASHEET: Verifica la sigla/P/N identificato confrontandolo con i pattern ufficiali del produttore per confermare form-factor reale (es. DIMM vs SO-DIMM), frequenza, timing, tensione e capacità effettiva per modulo/kit.",
+    "4. POLITICA 'ZERO ASSUNZIONI': Se le fotografie sono sfuocate, il prodotto è chiuso in scatola generica senza etichetta leggibile, o mancano prove inequivocabili del codice esatto, SCARTA categoricamente l'annuncio.",
+    "5. REPORT STRUTTURATO: Genera una tabella Markdown finale con: Prezzo, Prezzo Unitario (es. €/GB), Condizione, Part Number verificato da etichetta/testo e Link diretto."
+  ],
+  "components": {
+    "ram_ddr5": {
+      "name": "RAM DDR5 Desktop (DIMM / UDIMM)",
+      "description": "Moduli di memoria RAM DDR5 per PC Desktop a 288 pin",
+      "rules": "CRITERI DI VERIFICA DIMM vs SO-DIMM:\n- ACCETTA: Moduli lunghi standard DIMM / UDIMM a 288 pin per schede madri Desktop.\n- SCARTA: Moduli compatti SO-DIMM a 262 pin per computer portatili/notebook o mini-PC.\n- SCARTA: Moduli server con tecnologia registrata (RDIMM / ECC Registered) incompatibili con schede madri desktop consumer.\n\nDECODIFICA PART NUMBER (P/N) PRODUTTORI:\n- SK Hynix: Prefisso 'HMCG78...' (Desktop UDIMM OK) vs 'HMCG66...' (Laptop SO-DIMM NO).\n- Samsung: Prefisso 'M378...' o suffisso '...-UA0' (Desktop UDIMM OK) vs 'M425...' (Laptop SO-DIMM NO).\n- Kingston: Serie 'KF5...BB...' / 'KF5...BE...' (Fury Beast Desktop OK) vs 'KF5...IB...' (Fury Impact SO-DIMM NO).\n- Crucial / Micron: Sigla '...UC...' / 'CT...G56C...' (UDIMM Desktop OK) vs '...SC...' / 'CT...G56S...' (SO-DIMM Laptop NO).\n- Corsair: Serie 'CMK...' / 'CMP...' (Vengeance/Dominator Desktop OK) vs 'CMSX...' (Vengeance SO-DIMM NO)."
+    },
+    "matx_motherboard": {
+      "name": "Scheda Madre Micro-ATX (mATX)",
+      "description": "Schede madri con fattore di forma compatto Micro-ATX",
+      "rules": "FORM FACTOR:\n- ACCETTA: Schede madri Micro-ATX / mATX (dimensioni fino a 244 x 244 mm, tipicamente 4 slot PCIe e 4 slot RAM).\n- SCARTA: Mini-ITX (troppo piccole, 170 x 170 mm, max 1 slot PCIe e 2 slot RAM) e schede ATX / E-ATX standard (superiori a 244 mm di altezza)."
+    },
+    "psu_sfx": {
+      "name": "Alimentatore SFX / SFX-L",
+      "description": "Alimentatori compatti per case Small Form Factor (SFF)",
+      "rules": "FORM FACTOR:\n- ACCETTA: Alimentatori in standard SFX (125 x 100 x 63.5 mm) o SFX-L (125 x 125 x 63.5 mm).\n- SCARTA: Alimentatori ATX standard (150 x 140/160 x 86 mm) e formati proprietari/TFX/Flex-ATX se non richiesti."
+    }
+  }
 }
