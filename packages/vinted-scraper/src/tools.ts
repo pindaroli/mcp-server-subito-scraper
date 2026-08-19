@@ -145,11 +145,6 @@ export function registerTools(server: McpServer): void {
         .optional()
         .default(300)
         .describe('Timeout in seconds for Apify Actor execution (default: 300)'),
-      skipAiVision: z
-        .boolean()
-        .optional()
-        .default(false)
-        .describe('If true, disables AI rules inspection and returns raw unfiltered listings'),
       ruleModuleId: z
         .string()
         .optional()
@@ -168,7 +163,6 @@ export function registerTools(server: McpServer): void {
       sortBy,
       maxItems,
       timeoutSecs,
-      skipAiVision,
       ruleModuleId,
       token
     }) => {
@@ -187,7 +181,7 @@ export function registerTools(server: McpServer): void {
         console.error(`[Vinted Scraper] 📦 Recuperati ${result.items.length} articoli da Vinted (Dataset Apify: ${result.datasetUrl})`);
 
         const aiConfig = getAiConfig();
-        const shouldRunAi = !skipAiVision && aiConfig.isEnabled && (aiConfig.apiKey || process.env.AI_API_KEY);
+        const shouldRunAi = aiConfig.isEnabled && (aiConfig.apiKey || process.env.AI_API_KEY);
 
         let finalReport = '';
         let aiResult: any = null;
