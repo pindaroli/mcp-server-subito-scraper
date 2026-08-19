@@ -1,0 +1,5 @@
+{
+  "ram_ddr5": "NO SODIMM: Solo moduli lunghi DIMM/UDIMM Desktop (288 pin).\nPART NUMBER: SK Hynix HMCG78 (OK), HMCG66 (NO). Samsung M378 (OK), M425 (NO).",
+  "matx_motherboard": "FORM FACTOR: Cerca mATX o Micro-ATX (fino a 244 x 244 mm, max 4 slot PCIe).\nSCARTA: Mini-ITX (troppo piccole, 2 slot RAM) e ATX standard.",
+  "psu_sfx": "FORM FACTOR: Cerca sigla SFX (125x100x63.5mm). Attenzione alla variante SFX-L.\nSCARTA: Alimentatori ATX standard."
+}

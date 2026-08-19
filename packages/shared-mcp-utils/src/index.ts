@@ -1,13 +1,33 @@
 import fs from 'fs';
+import { fileURLToPath } from 'url';
+import path from 'path';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 
-// Default fallback rules
-const DEFAULT_HARDWARE_RULES: Record<string, string> = {
-  "ram_ddr5": "NO SODIMM: Solo moduli lunghi DIMM/UDIMM Desktop (288 pin).\nPART NUMBER: SK Hynix HMCG78 (OK), HMCG66 (NO). Samsung M378 (OK), M425 (NO).",
-  "matx_motherboard": "FORM FACTOR: Cerca mATX o Micro-ATX (fino a 244 x 244 mm, max 4 slot PCIe).\nSCARTA: Mini-ITX (troppo piccole, 2 slot RAM) e ATX standard.",
-  "psu_sfx": "FORM FACTOR: Cerca sigla SFX (125x100x63.5mm). Attenzione alla variante SFX-L.\nSCARTA: Alimentatori ATX standard."
-};
+/**
+ * Loads default rules from default_hardware_rules.json
+ */
+function loadDefaultRules(): Record<string, string> {
+  const currentDir = path.dirname(fileURLToPath(import.meta.url));
+  const candidatePaths = [
+    path.join(currentDir, 'default_hardware_rules.json'),
+    path.join(currentDir, '../src/default_hardware_rules.json'),
+    path.join(process.cwd(), 'hardware_rules.json')
+  ];
+
+  for (const p of candidatePaths) {
+    if (fs.existsSync(p)) {
+      try {
+        const content = fs.readFileSync(p, 'utf8');
+        return JSON.parse(content);
+      } catch (err) {
+        console.error(`[MCP Shared] Errore lettura regole da ${p}:`, err);
+      }
+    }
+  }
+
+  return {};
+}
 
 export function loadHardwareRules(): Record<string, string> {
   const customPath = process.env.HARDWARE_RULES_FILE;
@@ -19,7 +39,7 @@ export function loadHardwareRules(): Record<string, string> {
         console.error(`[MCP Shared] Regole hardware caricate con successo da: ${customPath}`);
         return JSON.parse(fileContent);
       } else {
-        console.error(`[MCP Shared] ATTENZIONE: Il file ${customPath} non esiste. Uso regole di default.`);
+        console.error(`[MCP Shared] ATTENZIONE: Il file specificato in HARDWARE_RULES_FILE (${customPath}) non esiste. Uso regole di default.`);
       }
     } catch (error) {
       console.error(`[MCP Shared] ERRORE durante il parsing del file ${customPath}:`, error);
@@ -27,7 +47,7 @@ export function loadHardwareRules(): Record<string, string> {
     }
   }
   
-  return DEFAULT_HARDWARE_RULES;
+  return loadDefaultRules();
 }
 
 export function registerHardwarePrompt(server: McpServer) {
