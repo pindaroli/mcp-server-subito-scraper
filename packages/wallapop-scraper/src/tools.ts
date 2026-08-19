@@ -8,16 +8,16 @@ import {
   WALLAPOP_ACTOR_ID
 } from './apify.js';
 import { buildWallapopSearchUrl } from './url-builder.js';
+import { inspectListingsWithAi, getAiConfig } from 'shared-mcp-utils';
 
 /**
- * Formats scraped Wallapop items into clean markdown
+ * Formats scraped Wallapop items into clean markdown for fallback display
  */
 function formatWallapopItemsMarkdown(items: Record<string, unknown>[]): string {
   if (items.length === 0) {
     return 'Nessun articolo trovato su Wallapop per i criteri specificati.';
   }
 
-  // Handle case where actor returns a single no_results record
   if (items.length === 1 && items[0].no_results) {
     const msg = (items[0].message as string) || 'Nessun risultato trovato';
     const reason = (items[0].reason as string) || '';
@@ -95,10 +95,10 @@ function formatWallapopItemsMarkdown(items: Record<string, unknown>[]): string {
  * Registers all Wallapop scraping tools on the MCP server instance
  */
 export function registerTools(server: McpServer): void {
-  // 1. Tool: Search Wallapop by query and structured filters
+  // 1. Tool: Search Wallapop by query and structured filters with AI Vision Inspection
   server.tool(
     'wallapop_search',
-    'Searches Wallapop secondhand marketplace across European domains (Spain, Italy, France, Portugal, UK) with custom filters.',
+    'Searches Wallapop secondhand marketplace across European domains (Spain, Italy, France, Portugal, UK) and automatically applies AI-powered rules filtering, price/GB calculations, and accepted/rejected breakdowns.',
     {
       query: z
         .string()
@@ -122,6 +122,12 @@ export function registerTools(server: McpServer): void {
         .positive()
         .optional()
         .describe('Maximum price filter in EUR'),
+      maxPricePerGB: z
+        .number()
+        .positive()
+        .optional()
+        .default(10)
+        .describe('Maximum price in EUR per GB for RAM hardware evaluation (default: 10 EUR/GB)'),
       orderBy: z
         .enum(['newest', 'price_low_to_high', 'price_high_to_low', 'most_relevance'])
         .optional()
@@ -142,7 +148,7 @@ export function registerTools(server: McpServer): void {
         .positive()
         .optional()
         .default(30)
-        .describe('Maximum number of items to retrieve (default: 30)'),
+        .describe('Maximum number of items to retrieve (default: 30, max recommended: 100)'),
       country: z
         .string()
         .optional()
@@ -154,6 +160,10 @@ export function registerTools(server: McpServer): void {
         .optional()
         .default(300)
         .describe('Timeout in seconds for Apify Actor execution (default: 300)'),
+      ruleModuleId: z
+        .string()
+        .optional()
+        .describe('Optional rule module ID to apply (e.g. "ram_ddr5", "ram", "matx_motherboard", "psu_sfx")'),
       token: z
         .string()
         .optional()
@@ -165,12 +175,14 @@ export function registerTools(server: McpServer): void {
       category,
       minPrice,
       maxPrice,
+      maxPricePerGB,
       orderBy,
       condition,
       shippingOnly,
       maxItems,
       country,
       timeoutSecs,
+      ruleModuleId,
       token
     }) => {
       try {
@@ -197,17 +209,40 @@ export function registerTools(server: McpServer): void {
 
         console.error(`[Wallapop Scraper] 📦 Recuperati ${result.items.length} articoli da Wallapop (Dataset Apify: ${result.datasetUrl})`);
 
-        const formatted = formatWallapopItemsMarkdown(result.items);
+        const aiConfig = getAiConfig();
+        const shouldRunAi = aiConfig.isEnabled && (aiConfig.apiKey || process.env.AI_API_KEY);
+
+        let finalReport = '';
+        let aiResult: any = null;
+
+        if (shouldRunAi && result.items.length > 0 && !result.items[0]?.no_results) {
+          try {
+            aiResult = await inspectListingsWithAi(result.items, {
+              targetQuery: query,
+              maxPricePerGB,
+              ruleModuleId: ruleModuleId || (query.toLowerCase().includes('ddr5') ? 'ram_ddr5' : 'ram'),
+              maxItemsToInspect: maxItems,
+              apifyStats: result.stats,
+              datasetUrl: result.datasetUrl
+            });
+            finalReport = aiResult.markdownReport;
+          } catch (aiErr: any) {
+            console.error('[Wallapop Scraper] AI Inspection error fallback:', aiErr);
+            finalReport = `⚠️ **Nota:** Analisi AI non riuscita (${aiErr.message}), mostro risultati standard.\n\n` + formatWallapopItemsMarkdown(result.items);
+          }
+        } else {
+          finalReport = formatWallapopItemsMarkdown(result.items);
+        }
 
         return {
           content: [
             {
               type: 'text',
-              text: `### Risultati Ricerca Wallapop per "${query}"\n- **Mercato:** \`${domain}.wallapop.com\`\n- **URL Ricerca:** ${searchUrl}\n- **Articoli estratti:** ${result.items.length} (Totale nel dataset: ${result.itemsCount})\n- **Dataset Apify:** [Console Apify Dataset](${result.datasetUrl})\n\n---\n\n${formatted}`
+              text: `### Risultati Ricerca Wallapop per "${query}"\n- **Mercato:** \`${domain}.wallapop.com\`\n- **URL Ricerca:** ${searchUrl}\n- **Articoli estratti:** ${result.items.length} (Totale nel dataset: ${result.itemsCount})\n- **Dataset Apify:** [Console Apify Dataset](${result.datasetUrl})\n\n---\n\n${finalReport}`
             },
             {
               type: 'text',
-              text: `JSON Risultati:\n\`\`\`json\n${JSON.stringify(result.items, null, 2)}\n\`\`\``
+              text: `JSON Risultati:\n\`\`\`json\n${JSON.stringify(aiResult ? aiResult : result.items, null, 2)}\n\`\`\``
             }
           ]
         };
@@ -225,10 +260,10 @@ export function registerTools(server: McpServer): void {
     }
   );
 
-  // 2. Tool: Scrape directly by Wallapop URL
+  // 2. Tool: Scrape directly by Wallapop URL with AI Vision Inspection
   server.tool(
     'wallapop_scrape_by_url',
-    'Scrapes listings or search pages directly from one or more Wallapop URLs using Apify Actor fayoussef/wallapop-scraper.',
+    'Scrapes listings or search pages directly from one or more Wallapop URLs and applies AI-powered rules filtering.',
     {
       urls: z
         .array(z.string())
@@ -240,6 +275,16 @@ export function registerTools(server: McpServer): void {
         .optional()
         .default(30)
         .describe('Maximum number of items to retrieve (default: 30)'),
+      maxPricePerGB: z
+        .number()
+        .positive()
+        .optional()
+        .default(10)
+        .describe('Maximum price in EUR per GB for RAM hardware evaluation (default: 10 EUR/GB)'),
+      ruleModuleId: z
+        .string()
+        .optional()
+        .describe('Optional rule module ID to apply (e.g. "ram_ddr5", "ram", "matx_motherboard", "psu_sfx")'),
       country: z
         .string()
         .optional()
@@ -256,7 +301,7 @@ export function registerTools(server: McpServer): void {
         .optional()
         .describe('Optional Apify API Token (overrides APIFY_TOKEN environment variable)')
     },
-    async ({ urls, maxItems, country, timeoutSecs, token }) => {
+    async ({ urls, maxItems, maxPricePerGB, ruleModuleId, country, timeoutSecs, token }) => {
       try {
         console.error(`\n[Wallapop Scraper] 🔎 Scraping diretto di ${urls.length} URLs Wallapop (maxItems=${maxItems})`);
 
@@ -268,17 +313,40 @@ export function registerTools(server: McpServer): void {
           token
         });
 
-        const formatted = formatWallapopItemsMarkdown(result.items);
+        const aiConfig = getAiConfig();
+        const shouldRunAi = aiConfig.isEnabled && (aiConfig.apiKey || process.env.AI_API_KEY);
+
+        let finalReport = '';
+        let aiResult: any = null;
+
+        if (shouldRunAi && result.items.length > 0 && !result.items[0]?.no_results) {
+          try {
+            aiResult = await inspectListingsWithAi(result.items, {
+              targetQuery: urls.join(', '),
+              maxPricePerGB,
+              ruleModuleId: ruleModuleId || 'ram_ddr5',
+              maxItemsToInspect: maxItems,
+              apifyStats: result.stats,
+              datasetUrl: result.datasetUrl
+            });
+            finalReport = aiResult.markdownReport;
+          } catch (aiErr: any) {
+            console.error('[Wallapop Scraper] AI Inspection error fallback:', aiErr);
+            finalReport = `⚠️ **Nota:** Analisi AI non riuscita (${aiErr.message}), mostro risultati standard.\n\n` + formatWallapopItemsMarkdown(result.items);
+          }
+        } else {
+          finalReport = formatWallapopItemsMarkdown(result.items);
+        }
 
         return {
           content: [
             {
               type: 'text',
-              text: `### Risultati Scraping Diretto Wallapop\n- **URLs processati:** ${urls.length}\n- **Articoli estratti:** ${result.items.length}\n- **Dataset Apify:** [Console Apify Dataset](${result.datasetUrl})\n\n---\n\n${formatted}`
+              text: `### Risultati Scraping Diretto Wallapop\n- **URLs processati:** ${urls.length}\n- **Articoli estratti:** ${result.items.length}\n- **Dataset Apify:** [Console Apify Dataset](${result.datasetUrl})\n\n---\n\n${finalReport}`
             },
             {
               type: 'text',
-              text: `JSON Risultati:\n\`\`\`json\n${JSON.stringify(result.items, null, 2)}\n\`\`\``
+              text: `JSON Risultati:\n\`\`\`json\n${JSON.stringify(aiResult ? aiResult : result.items, null, 2)}\n\`\`\``
             }
           ]
         };

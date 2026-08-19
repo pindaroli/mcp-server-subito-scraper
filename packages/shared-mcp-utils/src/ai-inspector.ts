@@ -111,14 +111,14 @@ export function getAiConfig() {
  * Normalizes URL, title, photos, and price extraction from listing item
  */
 function normalizeListing(item: ListingItem, index: number): NormalizedListing {
-  const rawUrl = item.url || item.link || item.item_url || '';
-  const match = rawUrl.match(/\/items\/(\d+)(?:-([^?]+))?/);
-  const id = String(item.id || (match ? match[1] : index + 1));
-  const slug = match && match[2] ? decodeURIComponent(match[2]).replace(/-/g, ' ') : '';
+  const rawUrl = item.url || item.link || item.item_url || item.listing_url || item.share_url || '';
+  const match = rawUrl.match(/\/(?:items|item)\/([^\/?#]+)/);
+  const id = String(item.id || item.item_id || (match ? match[1] : index + 1));
+  const slug = item.slug ? String(item.slug).replace(/-/g, ' ') : (match && match[1] ? decodeURIComponent(match[1]).replace(/-/g, ' ') : '');
 
   const rawTitle = (item.title || item.name || item.subject || '').trim();
   const brand = (item.brand || item.brand_title || '').trim();
-  const title = slug.length > 5 ? slug : (rawTitle || brand || `Articolo #${index + 1}`);
+  const title = (rawTitle.length > 3 ? rawTitle : (slug.length > 5 ? slug : (brand || `Articolo #${index + 1}`)));
 
   const rawPrice = item.price_numeric ?? parseFloat(String(item.price || item.total_item_price || '0').replace(',', '.'));
   const price = isNaN(rawPrice) ? 0 : rawPrice;

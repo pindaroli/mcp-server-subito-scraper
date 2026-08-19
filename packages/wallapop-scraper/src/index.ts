@@ -5,6 +5,7 @@ import log, { LogLevel } from '@apify/log';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { registerTools } from './tools.js';
+import { registerHardwarePrompt } from 'shared-mcp-utils';
 
 // Ensure Apify logger doesn't emit ANSI escape characters or pollute stdio
 log.setLevel(LogLevel.OFF);
@@ -79,13 +80,17 @@ async function main(): Promise<void> {
     },
     {
       capabilities: {
-        tools: {}
+        tools: {},
+        prompts: {}
       }
     }
   );
 
   // Register MCP tools
   registerTools(server);
+
+  // Register hardware verification prompt
+  registerHardwarePrompt(server);
 
   // Connect to stdio transport
   const transport = new StdioServerTransport();
