@@ -18,7 +18,10 @@
     "test:subito": "npm run test -w mcp-server-subito-scraper",
     "build:vinted": "npm run build -w mcp-server-vinted-scraper",
     "dev:vinted": "npm run dev -w mcp-server-vinted-scraper",
-    "test:vinted": "npm run test -w mcp-server-vinted-scraper"
+    "test:vinted": "npm run test -w mcp-server-vinted-scraper",
+    "build:wallapop": "npm run build -w mcp-server-wallapop-scraper",
+    "dev:wallapop": "npm run dev -w mcp-server-wallapop-scraper",
+    "test:wallapop": "npm run test -w mcp-server-wallapop-scraper"
   },
   "keywords": [
     "mcp",

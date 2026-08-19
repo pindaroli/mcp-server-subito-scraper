@@ -1,0 +1,55 @@
+{
+  "name": "mcp-server-wallapop-scraper",
+  "version": "1.0.0",
+  "description": "MCP (Model Context Protocol) server for scraping Wallapop listings across Spain, Italy, France, Portugal, and the UK using Apify Actor fayoussef/wallapop-scraper",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "mcp-server-wallapop-scraper": "./dist/index.js",
+    "wallapop-scraper-mcp": "./dist/index.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc && chmod +x dist/index.js",
+    "watch": "tsc --watch",
+    "test": "tsx test/smoke-test.ts",
+    "test:mcp": "npm run build && tsx test/test-mcp-client.ts",
+    "start": "node dist/index.js",
+    "dev": "tsx src/index.ts",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "wallapop",
+    "wallapop-scraper",
+    "scraper",
+    "apify",
+    "apify-actor",
+    "ai",
+    "claude",
+    "gemini"
+  ],
+  "author": "Olindo",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.0",
+    "apify-client": "^2.11.8",
+    "dotenv": "^16.4.7",
+    "shared-mcp-utils": "file:../shared-mcp-utils",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.4",
+    "tsx": "^4.19.3",
+    "typescript": "^5.7.3"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
