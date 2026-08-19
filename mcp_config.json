@@ -2,18 +2,18 @@
   "mcpServers": {
     "subito-scraper": {
       "command": "node",
-      "args": ["${workspaceFolder}/packages/subito-scraper/dist/index.js"],
+      "args": ["/Users/olindo/prj/oli-mcp-serves/packages/subito-scraper/dist/index.js"],
       "env": {
         "APIFY_TOKEN": "${env:APIFY_TOKEN}",
-        "HARDWARE_RULES_FILE": "${workspaceFolder}/hardware_rules.json"
+        "HARDWARE_RULES_FILE": "/Users/olindo/prj/oli-mcp-serves/hardware_rules.json"
       }
     },
     "vinted-scraper": {
       "command": "node",
-      "args": ["${workspaceFolder}/packages/vinted-scraper/dist/index.js"],
+      "args": ["/Users/olindo/prj/oli-mcp-serves/packages/vinted-scraper/dist/index.js"],
       "env": {
         "APIFY_TOKEN": "${env:APIFY_TOKEN}",
-        "HARDWARE_RULES_FILE": "${workspaceFolder}/hardware_rules.json"
+        "HARDWARE_RULES_FILE": "/Users/olindo/prj/oli-mcp-serves/hardware_rules.json"
       }
     }
   }

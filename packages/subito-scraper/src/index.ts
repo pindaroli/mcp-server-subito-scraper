@@ -73,7 +73,8 @@ async function main(): Promise<void> {
     },
     {
       capabilities: {
-        tools: {}
+        tools: {},
+        prompts: {}
       }
     }
   );
@@ -82,7 +83,7 @@ async function main(): Promise<void> {
   registerTools(server);
 
   // Register hardware verification prompt
-  registerHardwarePrompt(server.server);
+  registerHardwarePrompt(server);
 
   // Connect to stdio transport
   const transport = new StdioServerTransport();

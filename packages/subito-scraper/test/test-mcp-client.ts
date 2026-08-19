@@ -55,6 +55,18 @@ async function runMcpIntegrationTest(): Promise<void> {
     }
     console.log('✅ All expected MCP tools are registered correctly with valid schemas!');
 
+    // 1.1 Test listing prompts
+    const promptsResponse = await client.listPrompts();
+    console.log(`📋 Discovered ${promptsResponse.prompts.length} MCP prompts:`);
+    for (const p of promptsResponse.prompts) {
+      console.log(`  - 📝 [${p.name}]: ${p.description}`);
+    }
+    const hasPrompt = promptsResponse.prompts.some(p => p.name === 'hardware_expert_search');
+    if (!hasPrompt) {
+      throw new Error('❌ Missing hardware_expert_search prompt');
+    }
+    console.log('✅ Prompt registered correctly!');
+
     // 2. Test status check tool call
     console.log('\n🧪 Testing tool invocation "apify_check_status"...');
     const statusResult = await client.callTool({

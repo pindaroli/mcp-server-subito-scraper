@@ -51,6 +51,18 @@ async function runClientTest(): Promise<void> {
     }
     console.log('✅ All expected Vinted MCP tools are registered correctly with valid schemas!');
 
+    // 2. Discover prompts
+    const promptsResponse = await client.listPrompts();
+    console.log(`📋 Discovered ${promptsResponse.prompts.length} MCP prompts:`);
+    for (const p of promptsResponse.prompts) {
+      console.log(`  - 📝 [${p.name}]: ${p.description}`);
+    }
+    const hasPrompt = promptsResponse.prompts.some(p => p.name === 'hardware_expert_search');
+    if (!hasPrompt) {
+      throw new Error('❌ Missing hardware_expert_search prompt');
+    }
+    console.log('✅ Prompt registered correctly!');
+
     console.log('\n🎉 Local Vinted MCP server test completed successfully!');
   } catch (error) {
     console.error('❌ MCP integration test failed:', error);

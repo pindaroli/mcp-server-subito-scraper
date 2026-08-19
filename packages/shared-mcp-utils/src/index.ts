@@ -1,6 +1,6 @@
 import fs from 'fs';
-import { Server } from '@modelcontextprotocol/sdk/server/index.js';
-import { ListPromptsRequestSchema, GetPromptRequestSchema } from '@modelcontextprotocol/sdk/types.js';
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { z } from 'zod';
 
 // Default fallback rules
 const DEFAULT_HARDWARE_RULES: Record<string, string> = {
@@ -30,30 +30,24 @@ export function loadHardwareRules(): Record<string, string> {
   return DEFAULT_HARDWARE_RULES;
 }
 
-export function registerHardwarePrompt(server: Server) {
+export function registerHardwarePrompt(server: McpServer) {
   const rulesDB = loadHardwareRules();
 
-  server.setRequestHandler(ListPromptsRequestSchema, async () => {
-    return {
-      prompts: [{
-        name: "hardware_expert_search",
-        description: "Ricerca hardware applicando rigide regole di validazione 'Zero Assunzioni'.",
-        arguments: [{
-          name: "component",
-          description: `Categoria componente (Supportati: ${Object.keys(rulesDB).join(', ')})`,
-          required: true
-        }]
-      }]
-    };
-  });
-
-  server.setRequestHandler(GetPromptRequestSchema, async (request) => {
-    if (request.params.name === "hardware_expert_search") {
-      const component = request.params.arguments?.component;
+  server.registerPrompt(
+    "hardware_expert_search",
+    {
+      title: "Hardware Expert Search",
+      description: "Ricerca hardware applicando rigide regole di validazione 'Zero Assunzioni'.",
+      argsSchema: {
+        component: z.string().describe(`Categoria componente (Supportati: ${Object.keys(rulesDB).join(', ')})`)
+      }
+    },
+    async (args) => {
+      const component = args.component;
       
       let specificRules = "Nessuna regola specifica trovata nel database. Usa cautela estrema e controlla attentamente sigle ed etichette.";
       if (component && typeof component === 'string' && rulesDB[component]) {
-          specificRules = rulesDB[component];
+        specificRules = rulesDB[component];
       }
       
       return {
@@ -77,6 +71,5 @@ ISTRUZIONI GLOBALI:
         }]
       };
     }
-    throw new Error("Prompt non trovato");
-  });
+  );
 }

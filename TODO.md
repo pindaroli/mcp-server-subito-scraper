@@ -36,5 +36,32 @@ CRITERI DI VERIFICA RIGIDI (ZERO ASSUNZIONI):
    - Taglio (GB) e N° Stick
    - Velocità (MHz)
    - Part Number ESATTO letto dall'etichetta
-   - Link Vinted
 ```
+
+---
+
+## 🚀 Fase 2: Pacchetto Binario su Registry & Distribuzione Standalone
+
+### 🎯 Obiettivo
+Passare dalla modalità di sviluppo/debug locale (percorsi assoluti nel monorepo) alla distribuzione ufficiale come pacchetti binari eseguibili ovunque con un comando standard (es. `npx -y mcp-server-subito-scraper`).
+
+### 📋 Attività da Completare
+
+- [ ] **1. Strategia di Bundling Standalone per i Package:**
+  - Integrare `tsup` o `esbuild` nelle build dei package (`subito-scraper`, `vinted-scraper`) per incorporare `shared-mcp-utils` direttamente nel bundle finale `dist/index.js`, eliminando la dipendenza locale relativa `file:../shared-mcp-utils`.
+  - *(In alternativa)* Valutare la pubblicazione di `shared-mcp-utils` come pacchetto scoped (`@olindo/shared-mcp-utils`).
+
+- [ ] **2. Test di Esecuzione Binaria Locale (`npm link` / Pack):**
+  - Eseguire `npm link` nei package per testare l'invocazione globale via riga di comando sul sistema (`mcp-server-subito-scraper`, `mcp-server-vinted-scraper`).
+  - Verificare il pacchetto con `npm pack` e simulare l'installazione in un ambiente pulito.
+
+- [ ] **3. Configurazione Pubblicazione Registry (NPM / GitHub Packages):**
+  - Configurare `.npmignore` / `"files"` nei `package.json` per includere solo gli artefatti necessari (`dist`, `README.md`, `LICENSE`).
+  - Verificare metadati, keyword, licenza e repository URLs nei manifest.
+  - Setup autenticazione e script per `npm publish --access public`.
+
+- [ ] **4. CI/CD & Automazione Release (Opzionale):**
+  - Creare GitHub Action per build, test e pubblicazione automatica su tag/release o tramite `changesets`.
+
+- [ ] **5. Aggiornamento Documentazione e Template Client MCP:**
+  - Aggiornare i README con le istruzioni di configurazione standard `npx` per tutti i client MCP supportati (Claude Desktop, Antigravity, Cursor, Cline/Roo Code).
