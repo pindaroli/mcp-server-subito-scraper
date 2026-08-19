@@ -198,7 +198,9 @@ export function registerTools(server: McpServer): void {
               targetQuery: searchQuery,
               maxPricePerGB,
               ruleModuleId: ruleModuleId || (searchQuery.toLowerCase().includes('ddr5') ? 'ram_ddr5' : 'ram'),
-              maxItemsToInspect: maxItems
+              maxItemsToInspect: maxItems,
+              apifyStats: result.stats,
+              datasetUrl: result.datasetUrl
             });
             finalReport = aiResult.markdownReport;
           } catch (aiErr: any) {

@@ -13,6 +13,14 @@ export interface ScrapeVintedOptions {
   timeoutSecs?: number;
 }
 
+export interface ApifyRunStats {
+  durationMillis?: number;
+  computeUnits?: number;
+  costUsd?: number;
+  startedAt?: Date | string;
+  finishedAt?: Date | string;
+}
+
 export interface ApifyRunResult {
   runId: string;
   status: string;
@@ -21,6 +29,7 @@ export interface ApifyRunResult {
   items: Record<string, unknown>[];
   datasetUrl: string;
   actorUrl: string;
+  stats?: ApifyRunStats;
 }
 
 /**
@@ -91,6 +100,14 @@ export async function runVintedScraper(options: ScrapeVintedOptions): Promise<Ap
 
   const slicedItems = (items as Record<string, unknown>[]).slice(0, requestedLimit);
 
+  const stats: ApifyRunStats = {
+    durationMillis: (run.stats as any)?.durationMillis || (run.finishedAt && run.startedAt ? new Date(run.finishedAt).getTime() - new Date(run.startedAt).getTime() : undefined),
+    computeUnits: (run.stats as any)?.computeUnits ?? (run.usage as any)?.ACTOR_COMPUTE_UNITS,
+    costUsd: (run.usage as any)?.TOTAL_COST_USD || (run.stats as any)?.costUsd,
+    startedAt: run.startedAt,
+    finishedAt: run.finishedAt
+  };
+
   return {
     runId: run.id,
     status: run.status,
@@ -98,7 +115,8 @@ export async function runVintedScraper(options: ScrapeVintedOptions): Promise<Ap
     itemsCount: total ?? items.length,
     items: slicedItems,
     datasetUrl: `https://console.apify.com/storage/datasets/${run.defaultDatasetId}`,
-    actorUrl: `https://apify.com/${VINTED_ACTOR_ID}`
+    actorUrl: `https://apify.com/${VINTED_ACTOR_ID}`,
+    stats
   };
 }
 

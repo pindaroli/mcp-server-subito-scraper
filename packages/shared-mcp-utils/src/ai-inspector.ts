@@ -49,6 +49,22 @@ export interface AiInspectionVerdict {
   inspectionMethod?: 'DETERMINISTIC_RULE' | 'VISION_AI' | 'TEXT_AI';
 }
 
+export interface AiMetrics {
+  totalPromptTokens: number;
+  totalCompletionTokens: number;
+  totalTokens: number;
+  totalAiDurationSec: number;
+  tokensPerSec: number;
+}
+
+export interface ApifyRunStats {
+  durationMillis?: number;
+  computeUnits?: number;
+  costUsd?: number;
+  startedAt?: Date | string;
+  finishedAt?: Date | string;
+}
+
 export interface AiInspectionResult {
   aiModelUsed: string;
   providerUrl: string;
@@ -56,6 +72,8 @@ export interface AiInspectionResult {
   accepted: AiInspectionVerdict[];
   rejected: AiInspectionVerdict[];
   markdownReport: string;
+  metrics?: AiMetrics;
+  apifyStats?: ApifyRunStats;
 }
 
 interface NormalizedListing {
@@ -240,14 +258,73 @@ function applyDeterministicFilters(
 }
 
 /**
+ * Fetches the full item description from the listing page if missing from catalog scrape
+ */
+async function fetchItemDescription(url: string, timeoutMs: number = 4000): Promise<string | null> {
+  if (!url || !url.startsWith('http')) return null;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const resp = await fetch(url, {
+      signal: controller.signal,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko)',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'it-IT,it;q=0.9,en-US;q=0.8,en;q=0.7'
+      }
+    });
+    if (!resp.ok) return null;
+    const html = await resp.text();
+
+    // 1. Try extracting from JSON-LD schema
+    const jsonLdMatch = html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/i);
+    if (jsonLdMatch && jsonLdMatch[1]) {
+      try {
+        const schema = JSON.parse(jsonLdMatch[1]);
+        if (schema.description) return String(schema.description).trim();
+      } catch {}
+    }
+
+    // 2. Try extracting from <meta property="og:description" content="...">
+    const ogDescMatch = html.match(/<meta\s+property=["']og:description["']\s+content=["'](.*?)["']/i) ||
+                        html.match(/<meta\s+content=["'](.*?)["']\s+property=["']og:description["']/i);
+    if (ogDescMatch && ogDescMatch[1]) {
+      return ogDescMatch[1].trim();
+    }
+
+    // 3. Try extracting from <meta name="description" content="...">
+    const metaDescMatch = html.match(/<meta\s+name=["']description["']\s+content=["'](.*?)["']/i) ||
+                          html.match(/<meta\s+content=["'](.*?)["']\s+name=["']description["']/i);
+    if (metaDescMatch && metaDescMatch[1]) {
+      return metaDescMatch[1].trim();
+    }
+
+    return null;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/**
  * Executes chat completions request against OpenAI-compatible endpoint
  */
+interface AiCallResult {
+  content: string;
+  promptTokens: number;
+  completionTokens: number;
+  totalTokens: number;
+  durationSec: number;
+  tokensPerSec: number;
+}
+
 async function callOpenAiCompatible(
   baseUrl: string,
   apiKey: string,
   model: string,
   messages: any[]
-): Promise<string> {
+): Promise<AiCallResult> {
   const endpoint = baseUrl.endsWith('/v1') ? `${baseUrl}/chat/completions` : (baseUrl.includes('/chat/completions') ? baseUrl : `${baseUrl}/chat/completions`);
 
   const headers: Record<string, string> = {
@@ -258,6 +335,7 @@ async function callOpenAiCompatible(
     headers['Authorization'] = `Bearer ${apiKey}`;
   }
 
+  const callStartTime = Date.now();
   const response = await fetch(endpoint, {
     method: 'POST',
     headers,
@@ -268,6 +346,8 @@ async function callOpenAiCompatible(
       response_format: { type: 'json_object' }
     })
   });
+
+  const durationSec = Math.max(0.01, (Date.now() - callStartTime) / 1000);
 
   if (!response.ok) {
     const errBody = await response.text();
@@ -280,7 +360,19 @@ async function callOpenAiCompatible(
     throw new Error('AI API returned empty response content');
   }
 
-  return content;
+  const promptTokens = data.usage?.prompt_tokens ?? data.prompt_eval_count ?? 0;
+  const completionTokens = data.usage?.completion_tokens ?? data.eval_count ?? 0;
+  const totalTokens = data.usage?.total_tokens ?? (promptTokens + completionTokens);
+  const tokensPerSec = completionTokens > 0 ? parseFloat((completionTokens / durationSec).toFixed(1)) : 0;
+
+  return {
+    content,
+    promptTokens,
+    completionTokens,
+    totalTokens,
+    durationSec,
+    tokensPerSec
+  };
 }
 
 /**
@@ -296,6 +388,8 @@ export async function inspectListingsWithAi(
     token?: string;
     baseUrl?: string;
     model?: string;
+    apifyStats?: ApifyRunStats;
+    datasetUrl?: string;
   } = {}
 ): Promise<AiInspectionResult> {
   const startTime = Date.now();
@@ -332,6 +426,9 @@ export async function inspectListingsWithAi(
   logAudit(`[AI Inspector] 🚀 Inizio ispezione su ${candidates.length} annunci`);
   logAudit(`[AI Inspector] 🎯 Target: ${options.targetQuery || 'RAM DDR5 Desktop UDIMM'} | Limite: ${maxPricePerGB} €/GB`);
   logAudit(`[AI Inspector] ⚙️ Engine: ${baseUrl} (${model}) | Modalità: ${isVisionModel ? 'Vision Multimodale (Base64)' : 'Solo Testo'}`);
+  if (options.apifyStats?.computeUnits !== undefined) {
+    logAudit(`[AI Inspector] ⚡ Scraper Apify: ${(options.apifyStats.durationMillis ? (options.apifyStats.durationMillis / 1000).toFixed(1) + 's' : 'N/D')} | Compute Units: ${options.apifyStats.computeUnits.toFixed(4)} CU`);
+  }
   logAudit(`[AI Inspector] ========================================`);
 
   // Step 1: Apply deterministic pre-filters from JSON rules
@@ -368,12 +465,28 @@ export async function inspectListingsWithAi(
 
   logAudit(`[AI Inspector] 📊 Pre-filtro completato: ${preFilteredVerdicts.size} scartati istantaneamente, ${candidatesForAi.length} da verificare con AI`);
 
+  // Step 1b: Deep Scrape descriptions for candidates missing text
+  const missingDescCandidates = candidatesForAi.filter(c => !c.description || c.description.length < 15);
+  if (missingDescCandidates.length > 0) {
+    logAudit(`[AI Inspector] 📄 Deep Scrape: Recupero descrizione completa per ${missingDescCandidates.length} annunci...`);
+    await Promise.all(missingDescCandidates.map(async cand => {
+      const fetchedDesc = await fetchItemDescription(cand.url);
+      if (fetchedDesc) {
+        cand.description = fetchedDesc;
+        logAudit(`[AI Inspector]   ↳ ID ${cand.id}: "${fetchedDesc.substring(0, 60).replace(/\n/g, ' ')}..."`);
+      }
+    }));
+  }
+
   // Step 2: Perform AI inspection on remaining candidates
   const aiVerdictsMap: Map<string, any> = new Map();
+  let totalPromptTokens = 0;
+  let totalCompletionTokens = 0;
+  let totalAiDurationSec = 0;
 
   if (candidatesForAi.length > 0) {
     const systemPrompt = `Sei un verificatore hardware esperto con capacità di analisi visiva/OCR avanzata.
-Il tuo compito è analizzare ciascun annuncio e determinare se si tratta di memoria RAM per Desktop (DIMM / UDIMM a 288 pin) o laptop (SO-DIMM a 262 pin).
+Il tuo compito è analizzare ciascun annuncio e determinare se si tratta di memoria RAM per Desktop (DIMM / UDIMM a 288 pin) o laptop (SO-DIMM a 262 pin) e verificare il prezzo unitario.
 
 REGOLE GLOBALI:
 ${globalRulesText}
@@ -385,10 +498,18 @@ OBIETTIVO UTENTE:
 - Target: ${options.targetQuery || 'RAM DDR5 Desktop UDIMM a 288 pin'}
 - Prezzo massimo ammesso al GB: ${maxPricePerGB} EUR/GB
 
-LOGICA DI VERIFICA:
-1. Se sono presenti immagini, esamina attentamente l'etichetta del produttore (Samsung, SK Hynix, Kingston, Crucial, Corsair), il Part Number e le proporzioni fisiche del PCB (DIMM desktop lungo a 288 pin vs SO-DIMM corto a 262 pin).
-2. Se l'etichetta o il modulo indicano SO-DIMM (laptop) o memoria server ECC Registered, imposta status: 'REJECTED' e formFactor: 'SODIMM_LAPTOP' o 'ECC_SERVER'.
-3. Estrai la capacità in GB (es. 16GB, 32GB per kit 2x16GB) e calcola il prezzo unitario. Se supera ${maxPricePerGB} EUR/GB -> REJECTED.
+REGOLE RIGIDE DI VERIFICA & ANTI-ALLUCINAZIONE:
+1. FORM FACTOR & PIN:
+   - Se dalle immagini l'etichetta o il modulo indicano SO-DIMM (laptop a 262 pin), o memoria server ECC Registered, imposta status: 'REJECTED' e formFactor: 'SODIMM_LAPTOP' o 'ECC_SERVER'.
+2. DETERMINAZIONE DELLA CAPACITÀ (GB) & PREZZO/GB:
+   - DEVI estrarre la capacità in GB con CERTEZZA ASSOLUTA da:
+     a) Titolo o Descrizione dell'annuncio (es. "8GB", "16GB", "32GB", "2x16GB", "8 giga").
+     b) Part Number leggibile con assoluta chiarezza sull'etichetta nella foto (es. KF5...BB-8 per 8GB, -16 per 16GB, -32 o K2-32 per 32GB).
+   - REGOLA ANTI-ALLUCINAZIONE ASSOLUTA: SE la capacità in GB NON è esplicitamente dichiarata nel testo E l'etichetta nella foto non è leggibile con certezza al 100%, DEVI impostare "detectedCapacityGB": null e "status": "REJECTED" (motivo: "Capacità non verificabile con certezza da testo o OCR").
+   - È SEVERAMENTE VIETATO INDOVINARE, ipotizzare o assumere tagli standard (es. NON presumere 16GB solo perché è DDR5 se non c'è prova certa).
+   - DISTINZIONE KIT vs SINGOLO STICK: Se l'annuncio vende 1 solo modulo da 8GB, la capacità totale è 8GB (NON 16GB!). Se vende un kit 2x8GB, la capacità totale è 16GB.
+3. CONVALIDA FINALE:
+   - Imposta status: 'ACCEPTED' SOLO SE formFactor è 'UDIMM_DESKTOP', detectedGeneration è conforme, detectedCapacityGB è certo al 100% E (Prezzo / Capacità) <= ${maxPricePerGB} EUR/GB.
 
 DEVI RESTITUIRE ESCLUSIVAMENTE UN JSON VALIDO nel formato:
 {
@@ -402,12 +523,12 @@ DEVI RESTITUIRE ESCLUSIVAMENTE UN JSON VALIDO nel formato:
       "detectedPartNumber": "string o null",
       "pricePerGB": number o null,
       "rejectionReason": "string con motivazione chiara o null se ACCEPTED",
-      "evidence": "string sintetica che riassume le prove lette nell'immagine (OCR/part number) o nel testo"
+      "evidence": "string sintetica con prove certe (testo o OCR etichetta)"
     }
   ]
 }`;
 
-    // Process candidates in chunks (max 4 per batch to keep visual context sharp and avoid memory overload)
+    // Process candidates in chunks (max 3 per batch for vision)
     const chunkSize = isVisionModel ? 3 : 15;
     for (let i = 0; i < candidatesForAi.length; i += chunkSize) {
       const chunk = candidatesForAi.slice(i, i + chunkSize);
@@ -422,7 +543,7 @@ DEVI RESTITUIRE ESCLUSIVAMENTE UN JSON VALIDO nel formato:
         textSummary += `Titolo: ${item.title}\n`;
         textSummary += `Brand: ${item.brand || 'N/D'}\n`;
         textSummary += `Prezzo: ${item.price} ${item.currency}\n`;
-        textSummary += `Descrizione: ${item.description || 'Nessuna descrizione'}\n`;
+        textSummary += `Descrizione: ${item.description || 'Nessuna descrizione fornita'}\n`;
         textSummary += `URL: ${item.url}\n\n`;
       }
 
@@ -455,8 +576,14 @@ DEVI RESTITUIRE ESCLUSIVAMENTE UN JSON VALIDO nel formato:
       ];
 
       try {
-        const rawJson = await callOpenAiCompatible(baseUrl, apiKey, model, messages);
-        const cleaned = rawJson.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+        const callRes = await callOpenAiCompatible(baseUrl, apiKey, model, messages);
+        totalPromptTokens += callRes.promptTokens;
+        totalCompletionTokens += callRes.completionTokens;
+        totalAiDurationSec += callRes.durationSec;
+
+        logAudit(`[AI Inspector]   ↳ Chunk completato in ${callRes.durationSec.toFixed(1)}s (${callRes.tokensPerSec} tok/s) | Tokens: ${callRes.promptTokens} in / ${callRes.completionTokens} out`);
+
+        const cleaned = callRes.content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
         const parsed = JSON.parse(cleaned);
         const results = Array.isArray(parsed) ? parsed : (parsed.results || parsed.verdicts || []);
         for (const res of results) {
@@ -482,13 +609,15 @@ DEVI RESTITUIRE ESCLUSIVAMENTE UN JSON VALIDO nel formato:
     const capacityGB = typeof aiVerdict.detectedCapacityGB === 'number' ? aiVerdict.detectedCapacityGB : null;
     const pricePerGB = capacityGB && cand.price > 0 ? (cand.price / capacityGB) : (typeof aiVerdict.pricePerGB === 'number' ? aiVerdict.pricePerGB : null);
 
-    const status: 'ACCEPTED' | 'REJECTED' = (aiVerdict.status === 'ACCEPTED' && (!pricePerGB || pricePerGB <= maxPricePerGB)) 
+    const status: 'ACCEPTED' | 'REJECTED' = (aiVerdict.status === 'ACCEPTED' && capacityGB !== null && (!pricePerGB || pricePerGB <= maxPricePerGB)) 
       ? 'ACCEPTED' 
       : 'REJECTED';
 
     let rejectionReason = aiVerdict.rejectionReason;
     if (!rejectionReason && status === 'REJECTED') {
-      if (pricePerGB && pricePerGB > maxPricePerGB) {
+      if (capacityGB === null) {
+        rejectionReason = 'Capacità in GB non verificabile con certezza dal testo o dall\'etichetta';
+      } else if (pricePerGB && pricePerGB > maxPricePerGB) {
         rejectionReason = `Prezzo unitario ${pricePerGB.toFixed(2)} €/GB superiore alla soglia di ${maxPricePerGB} €/GB`;
       } else if (aiVerdict.formFactor === 'SODIMM_LAPTOP') {
         rejectionReason = 'Modulo compatto SO-DIMM per notebook/laptop identificato da foto/OCR';
@@ -524,11 +653,30 @@ DEVI RESTITUIRE ESCLUSIVAMENTE UN JSON VALIDO nel formato:
   const rejected = finalVerdicts.filter(v => v.status === 'REJECTED');
 
   const elapsedSecs = ((Date.now() - startTime) / 1000).toFixed(1);
+  const overallTokensPerSec = totalCompletionTokens > 0 && totalAiDurationSec > 0 
+    ? parseFloat((totalCompletionTokens / totalAiDurationSec).toFixed(1)) 
+    : 0;
 
-  // Build markdown report with prominent audit log
+  const metrics: AiMetrics = {
+    totalPromptTokens,
+    totalCompletionTokens,
+    totalTokens: totalPromptTokens + totalCompletionTokens,
+    totalAiDurationSec: parseFloat(totalAiDurationSec.toFixed(1)),
+    tokensPerSec: overallTokensPerSec
+  };
+
+  // Build markdown report with prominent audit log and full statistics
   let report = `## 🤖 Report Analisi & Filtraggio Hardware\n`;
-  report += `- **Engine:** \`${baseUrl}\` | **Modello:** \`${model}\` (${isVisionModel ? 'Vision Multimodale Base64' : 'Solo Testo'})\n`;
-  report += `- **Annunci analizzati:** ${candidates.length} | **Accettati:** ${accepted.length} | **Scartati:** ${rejected.length} | **Tempo:** ${elapsedSecs}s\n\n`;
+  report += `- **Engine AI:** \`${baseUrl}\` | **Modello:** \`${model}\` (${isVisionModel ? 'Vision Multimodale Base64 + Normalizzazione JPEG' : 'Solo Testo'})\n`;
+  report += `- **Annunci analizzati:** ${candidates.length} | **Accettati:** ${accepted.length} | **Scartati:** ${rejected.length} | **Tempo totale:** ${elapsedSecs}s\n`;
+
+  if (options.apifyStats) {
+    const apifyDuration = options.apifyStats.durationMillis ? `${(options.apifyStats.durationMillis / 1000).toFixed(1)}s` : 'N/D';
+    const cuStr = options.apifyStats.computeUnits !== undefined ? `${options.apifyStats.computeUnits.toFixed(4)} CU` : 'N/D';
+    report += `- **⚡ Statistiche Scraper Apify:** Tempo Actor: **${apifyDuration}** | Compute Units: **${cuStr}**${options.datasetUrl ? ` | [Dataset Console](${options.datasetUrl})` : ''}\n`;
+  }
+
+  report += `- **⚡ Metriche Inferenza AI (${model}):** **${totalPromptTokens.toLocaleString()} prompt tok** + **${totalCompletionTokens.toLocaleString()} completion tok** = **${metrics.totalTokens.toLocaleString()} tok totali** | Velocità: **${overallTokensPerSec} tok/s** | Tempo AI: **${metrics.totalAiDurationSec}s**\n\n`;
 
   report += `### 🟢 Annunci Convalidati (Prezzo unitario <= ${maxPricePerGB} €/GB)\n\n`;
   if (accepted.length === 0) {
@@ -562,7 +710,7 @@ DEVI RESTITUIRE ESCLUSIVAMENTE UN JSON VALIDO nel formato:
   report += `### 📋 Log di Ispezione & Audit Trail\n`;
   report += `\`\`\`text\n`;
   report += auditLogs.join('\n') + `\n`;
-  report += `[AI Inspector] 🏁 Completato in ${elapsedSecs}s - Accettati: ${accepted.length}, Scartati: ${rejected.length}\n`;
+  report += `[AI Inspector] 🏁 Completato in ${elapsedSecs}s (AI: ${metrics.totalAiDurationSec}s @ ${overallTokensPerSec} tok/s) - Accettati: ${accepted.length}, Scartati: ${rejected.length}\n`;
   report += `\`\`\`\n`;
 
   return {
@@ -571,7 +719,9 @@ DEVI RESTITUIRE ESCLUSIVAMENTE UN JSON VALIDO nel formato:
     totalAnalyzed: candidates.length,
     accepted,
     rejected,
-    markdownReport: report
+    markdownReport: report,
+    metrics,
+    apifyStats: options.apifyStats
   };
 }
 
