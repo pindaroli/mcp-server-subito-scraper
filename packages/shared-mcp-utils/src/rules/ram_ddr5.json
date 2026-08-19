@@ -1,0 +1,32 @@
+{
+  "name": "RAM DDR5 Desktop (DIMM / UDIMM)",
+  "description": "Moduli di memoria RAM DDR5 per PC Desktop a 288 pin",
+  "rules": "CRITERI DI VERIFICA DIMM vs SO-DIMM:\n- ACCETTA: Moduli lunghi standard DIMM / UDIMM a 288 pin per schede madri Desktop (attestati da almeno una foto dell'etichetta/modulo o da titolo/descrizione/part number coerenti).\n- SCARTA: Moduli compatti SO-DIMM a 262 pin per computer portatili/notebook o mini-PC (es. Kingston Fury Impact, Crucial SODIMM, o foto con modulo corto).\n- SCARTA: Moduli server con tecnologia registrata (RDIMM / ECC Registered) incompatibili con schede madri desktop consumer.\n- SCARTA: Schede video con memoria GDDR5, schede madri e accessori non RAM.\n\nDECODIFICA PART NUMBER (P/N) PRODUTTORI:\n- SK Hynix: Prefisso 'HMCG78...' (Desktop UDIMM OK) vs 'HMCG66...' (Laptop SO-DIMM NO).\n- Samsung: Prefisso 'M378...' o suffisso '...-UA0' (Desktop UDIMM OK) vs 'M425...' (Laptop SO-DIMM NO).\n- Kingston: Serie 'KF5...BB...' / 'KF5...BE...' (Fury Beast Desktop OK) vs 'KF5...IB...' (Fury Impact SO-DIMM NO).\n- Crucial / Micron: Sigla '...UC...' / 'CT...G56C...' (UDIMM Desktop OK) vs '...SC...' / 'CT...G56S...' (SO-DIMM Laptop NO).\n- Corsair: Serie 'CMK...' / 'CMP...' (Vengeance/Dominator Desktop OK) vs 'CMSX...' (Vengeance SO-DIMM NO).",
+  "deterministic_filters": {
+    "exclude_capacities_gb": [12],
+    "exclude_keywords": [
+      "so-dimm",
+      "sodimm",
+      "so dimm",
+      "so_dimm",
+      "laptop",
+      "notebook",
+      "portatile",
+      "rdimm",
+      "ecc reg",
+      "ecc registered",
+      "registered ecc",
+      "gddr5",
+      "scheda madre",
+      "motherboard",
+      "adattatore"
+    ],
+    "exclude_part_number_prefixes": [
+      "HMCG66",
+      "M425",
+      "CMSX",
+      "KF5.*IB",
+      "CT.*G56S"
+    ]
+  }
+}

@@ -8,6 +8,7 @@ import {
   SUBITO_ACTOR_ID
 } from './apify.js';
 import { buildSubitoSearchUrl } from './url-builder.js';
+import { inspectListingsWithAi, getAiConfig } from 'shared-mcp-utils';
 
 /**
  * Formats scraped items into clean markdown for display to LLM / user
@@ -83,7 +84,7 @@ export function registerTools(server: McpServer): void {
   // 1. Tool: Scrape by direct search URL
   server.tool(
     'subito_scrape_by_url',
-    'Scrapes classified ads directly from a Subito.it search URL using Apify Actor (azzouzana/subito-scraper-pro-by-search-url). CRITICAL: Se l\'utente sta cercando componenti hardware, dopo aver ottenuto i risultati DEVI CHIAMARE IL PROMPT "hardware_expert_search" per applicare le regole visive.',
+    'Scrapes classified ads directly from a Subito.it search URL using Apify Actor (azzouzana/subito-scraper-pro-by-search-url) and optionally applies AI rules filtering.',
     {
       searchUrl: z
         .string()
@@ -101,13 +102,18 @@ export function registerTools(server: McpServer): void {
         .positive()
         .optional()
         .default(300)
-        .describe('Timeout in seconds for Apify Actor execution (default: 300)'),
+        .describe('Timeout in seconds for Apify Actor execution'),
+      skipAiVision: z
+        .boolean()
+        .optional()
+        .default(false)
+        .describe('If true, disables AI rules inspection'),
       token: z
         .string()
         .optional()
         .describe('Optional Apify API Token (overrides APIFY_TOKEN environment variable)')
     },
-    async ({ searchUrl, maxItems, timeoutSecs, token }) => {
+    async ({ searchUrl, maxItems, timeoutSecs, skipAiVision, token }) => {
       try {
         const result = await runSubitoScraper({
           searchUrl,
@@ -116,17 +122,36 @@ export function registerTools(server: McpServer): void {
           token
         });
 
-        const markdownSummary = formatItemsMarkdown(result.items);
+        const aiConfig = getAiConfig();
+        const shouldRunAi = !skipAiVision && aiConfig.isEnabled && (aiConfig.apiKey || process.env.AI_API_KEY);
+
+        let finalReport = '';
+        let aiResult: any = null;
+
+        if (shouldRunAi && result.items.length > 0) {
+          try {
+            aiResult = await inspectListingsWithAi(result.items, {
+              targetQuery: searchUrl,
+              maxItemsToInspect: maxItems
+            });
+            finalReport = aiResult.markdownReport;
+          } catch (aiErr: any) {
+            console.error('[Subito Scraper] AI Inspection error:', aiErr);
+            finalReport = `⚠️ **Nota:** Analisi AI non riuscita (${aiErr.message}), mostro risultati standard.\n\n` + formatItemsMarkdown(result.items);
+          }
+        } else {
+          finalReport = formatItemsMarkdown(result.items);
+        }
 
         return {
           content: [
             {
               type: 'text',
-              text: `### Scraping completato con successo da Subito.it\n- **URL Ricerca:** ${searchUrl}\n- **Annunci estratti:** ${result.items.length} (Totale nel dataset: ${result.itemsCount})\n- **Dataset Apify:** [Console Apify Dataset](${result.datasetUrl})\n\n---\n\n${markdownSummary}`
+              text: `### Risultati Scraping Subito.it per URL\n- **URL:** ${searchUrl}\n- **Annunci estratti:** ${result.items.length} (Totale nel dataset: ${result.itemsCount})\n- **Dataset Apify:** [Console Apify Dataset](${result.datasetUrl})\n\n---\n\n${finalReport}`
             },
             {
               type: 'text',
-              text: `JSON Risultati:\n\`\`\`json\n${JSON.stringify(result.items, null, 2)}\n\`\`\``
+              text: `JSON Risultati:\n\`\`\`json\n${JSON.stringify(aiResult ? aiResult : result.items, null, 2)}\n\`\`\``
             }
           ]
         };
@@ -144,14 +169,14 @@ export function registerTools(server: McpServer): void {
     }
   );
 
-  // 2. Tool: Search Subito by query and filters (automated URL builder + scraper)
+  // 2. Tool: Search Subito by query and filters
   server.tool(
     'subito_search',
-    'Searches Subito.it for ads by keywords, category, region, price range, and shipping, then scrapes the results via Apify. CRITICAL: Se l\'utente sta cercando componenti hardware (es. RAM, GPU, Schede Madri), dopo aver ottenuto i risultati DEVI CHIAMARE IL PROMPT "hardware_expert_search", scaricare le foto in locale e applicare rigorosamente le regole visive prima di rispondere.',
+    'Searches Subito.it for classified ads and automatically applies AI-powered rules filtering, price/GB calculations, and accepted/rejected breakdowns.',
     {
       query: z
         .string()
-        .describe('Search query keyword (e.g. "MacBook Pro M3", "BMW 320d", "Appartamento centro")'),
+        .describe('Search query keyword (e.g. "RAM DDR5", "MacBook Pro M3", "BMW 320d")'),
       category: z
         .string()
         .optional()
@@ -176,6 +201,12 @@ export function registerTools(server: McpServer): void {
         .positive()
         .optional()
         .describe('Maximum price in EUR (optional)'),
+      maxPricePerGB: z
+        .number()
+        .positive()
+        .optional()
+        .default(10)
+        .describe('Maximum price in EUR per GB for RAM hardware evaluation (default: 10 EUR/GB)'),
       shippingOnly: z
         .boolean()
         .optional()
@@ -200,6 +231,15 @@ export function registerTools(server: McpServer): void {
         .optional()
         .default(300)
         .describe('Timeout in seconds for Apify Actor execution'),
+      skipAiVision: z
+        .boolean()
+        .optional()
+        .default(false)
+        .describe('If true, disables AI rules inspection and returns raw unfiltered listings'),
+      ruleModuleId: z
+        .string()
+        .optional()
+        .describe('Optional rule module ID to apply (e.g. "ram_ddr5", "ram", "matx_motherboard", "psu_sfx")'),
       token: z
         .string()
         .optional()
@@ -211,10 +251,13 @@ export function registerTools(server: McpServer): void {
       region,
       minPrice,
       maxPrice,
+      maxPricePerGB,
       shippingOnly,
       sortBy,
       maxItems,
       timeoutSecs,
+      skipAiVision,
+      ruleModuleId,
       token
     }) => {
       try {
@@ -235,17 +278,38 @@ export function registerTools(server: McpServer): void {
           token
         });
 
-        const markdownSummary = formatItemsMarkdown(result.items);
+        const aiConfig = getAiConfig();
+        const shouldRunAi = !skipAiVision && aiConfig.isEnabled && (aiConfig.apiKey || process.env.AI_API_KEY);
+
+        let finalReport = '';
+        let aiResult: any = null;
+
+        if (shouldRunAi && result.items.length > 0) {
+          try {
+            aiResult = await inspectListingsWithAi(result.items, {
+              targetQuery: query,
+              maxPricePerGB,
+              ruleModuleId: ruleModuleId || (query.toLowerCase().includes('ddr5') ? 'ram_ddr5' : 'ram'),
+              maxItemsToInspect: maxItems
+            });
+            finalReport = aiResult.markdownReport;
+          } catch (aiErr: any) {
+            console.error('[Subito Scraper] AI Inspection error:', aiErr);
+            finalReport = `⚠️ **Nota:** Analisi AI non riuscita (${aiErr.message}), mostro risultati standard.\n\n` + formatItemsMarkdown(result.items);
+          }
+        } else {
+          finalReport = formatItemsMarkdown(result.items);
+        }
 
         return {
           content: [
             {
               type: 'text',
-              text: `### Risultati Ricerca Subito.it per "${query}"\n- **URL Generato:** ${searchUrl}\n- **Categoria:** ${category} | **Regione:** ${region}\n- **Annunci trovati:** ${result.items.length} (Totale nel dataset: ${result.itemsCount})\n- **Dataset Apify:** [Console Apify Dataset](${result.datasetUrl})\n\n---\n\n${markdownSummary}`
+              text: `### Risultati Ricerca Subito.it per "${query}"\n- **URL Generato:** ${searchUrl}\n- **Categoria:** ${category} | **Regione:** ${region}\n- **Annunci trovati:** ${result.items.length} (Totale nel dataset: ${result.itemsCount})\n- **Dataset Apify:** [Console Apify Dataset](${result.datasetUrl})\n\n---\n\n${finalReport}`
             },
             {
               type: 'text',
-              text: `JSON Risultati:\n\`\`\`json\n${JSON.stringify(result.items, null, 2)}\n\`\`\``
+              text: `JSON Risultati:\n\`\`\`json\n${JSON.stringify(aiResult ? aiResult : result.items, null, 2)}\n\`\`\``
             }
           ]
         };
@@ -263,30 +327,40 @@ export function registerTools(server: McpServer): void {
     }
   );
 
-  // 3. Tool: Fetch items from a previous dataset ID
+  // 3. Tool: Fetch items from existing dataset ID
   server.tool(
     'subito_get_dataset_items',
     'Fetches scraped items from a previously generated Apify dataset ID',
     {
-      datasetId: z.string().describe('The Apify Dataset ID to fetch items from'),
-      limit: z.number().int().positive().optional().default(50).describe('Limit number of items to fetch'),
-      offset: z.number().int().nonnegative().optional().default(0).describe('Offset for pagination'),
-      token: z.string().optional().describe('Optional Apify API Token')
+      datasetId: z
+        .string()
+        .describe('Apify Dataset ID containing scraped Subito.it listings'),
+      limit: z
+        .number()
+        .int()
+        .positive()
+        .optional()
+        .default(50)
+        .describe('Number of items to retrieve (default: 50)'),
+      token: z
+        .string()
+        .optional()
+        .describe('Optional Apify API Token (overrides APIFY_TOKEN environment variable)')
     },
-    async ({ datasetId, limit, offset, token }) => {
+    async ({ datasetId, limit, token }) => {
       try {
-        const data = await getDatasetItems(datasetId, limit, offset, token);
-        const markdownSummary = formatItemsMarkdown(data.items);
+        const { items, total } = await getDatasetItems(datasetId, limit, 0, token);
+        const markdownSummary = formatItemsMarkdown(items);
 
         return {
           content: [
             {
               type: 'text',
-              text: `### Dataset Apify: ${datasetId}\n- **Elementi recuperati:** ${data.count} (Totale: ${data.total})\n- **Offset:** ${offset}\n\n---\n\n${markdownSummary}`
+              text: `### Dataset Apify: \`${datasetId}\`\n- **Articoli recuperati:** ${items.length} di ${total}\n- **Link Dataset:** [Console Apify](https://console.apify.com/storage/datasets/${datasetId})\n\n---\n\n${markdownSummary}`
             },
             {
               type: 'text',
-              text: `JSON:\n\`\`\`json\n${JSON.stringify(data.items, null, 2)}\n\`\`\``
+              text: `JSON Risultati:\n\`\`\`json\n${JSON.stringify(items, null, 2)}\n\`\`\``
             }
           ]
         };
@@ -304,24 +378,40 @@ export function registerTools(server: McpServer): void {
     }
   );
 
-  // 4. Tool: Check Apify status and token validity
+  // 4. Tool: Check Apify API connection and token status
   server.tool(
     'apify_check_status',
     'Checks the status of the Apify account and validates the API token',
     {
-      token: z.string().optional().describe('Optional Apify API Token to test')
+      token: z
+        .string()
+        .optional()
+        .describe('Optional Apify API Token to test (overrides APIFY_TOKEN environment variable)')
     },
     async ({ token }) => {
       try {
-        const userInfo = await checkApifyStatus(token);
-        return {
-          content: [
-            {
-              type: 'text',
-              text: `✅ **Connessione ad Apify riuscita!**\n\n- **Utente:** ${userInfo.username} (${userInfo.email})\n- **Piano:** ${userInfo.plan || 'Free / Pay-per-event'}\n- **Actor ID configurato:** \`${SUBITO_ACTOR_ID}\``
-            }
-          ]
-        };
+        const status = await checkApifyStatus(token);
+
+        if (status.isValid) {
+          return {
+            content: [
+              {
+                type: 'text',
+                text: `✅ **Connessione ad Apify riuscita!**\n\n- **Utente:** ${status.username} (${status.email})\n- **Piano:** ${status.plan}\n- **Actor ID configurato:** \`${SUBITO_ACTOR_ID}\``
+              }
+            ]
+          };
+        } else {
+          return {
+            isError: true,
+            content: [
+              {
+                type: 'text',
+                text: `🔴 **Verifica connessione ad Apify fallita:** ${status.error}`
+              }
+            ]
+          };
+        }
       } catch (error) {
         return {
           isError: true,

@@ -7,6 +7,7 @@ import {
   formatApifyError,
   VINTED_ACTOR_ID
 } from './apify.js';
+import { inspectListingsWithAi, getAiConfig } from 'shared-mcp-utils';
 
 /**
  * Formats scraped Vinted items into clean markdown for display to LLM / user
@@ -97,11 +98,11 @@ export function registerTools(server: McpServer): void {
   // 1. Tool: Search Vinted by query and filters
   server.tool(
     'vinted_search',
-    'Searches Vinted for secondhand clothes, shoes, bags, and items across European domains using Apify Actor (automation-lab/vinted-scraper). CRITICAL: Se l\'utente sta cercando componenti hardware (es. RAM, GPU, Schede Madri), dopo aver ottenuto i risultati DEVI CHIAMARE IL PROMPT "hardware_expert_search", scaricare le foto in locale e applicare rigorosamente le regole visive prima di rispondere.',
+    'Searches Vinted for secondhand items across European domains and automatically applies AI-powered rules filtering, price/GB calculations, and accepted/rejected breakdowns.',
     {
       searchQuery: z
         .string()
-        .describe('Search query keyword (e.g. "giacca pelle vintage", "nike dunk low", "borsa gucci")'),
+        .describe('Search query keyword (e.g. "RAM DDR5", "Corsair DDR5", "giacca pelle vintage")'),
       domain: z
         .string()
         .optional()
@@ -119,6 +120,12 @@ export function registerTools(server: McpServer): void {
         .positive()
         .optional()
         .describe('Maximum price filter in EUR or domain currency'),
+      maxPricePerGB: z
+        .number()
+        .positive()
+        .optional()
+        .default(10)
+        .describe('Maximum price in EUR per GB for RAM hardware evaluation (default: 10 EUR/GB)'),
       sortBy: z
         .enum(['price_low_to_high', 'price_high_to_low', 'newest_first', 'relevance'])
         .optional()
@@ -138,6 +145,15 @@ export function registerTools(server: McpServer): void {
         .optional()
         .default(300)
         .describe('Timeout in seconds for Apify Actor execution (default: 300)'),
+      skipAiVision: z
+        .boolean()
+        .optional()
+        .default(false)
+        .describe('If true, disables AI rules inspection and returns raw unfiltered listings'),
+      ruleModuleId: z
+        .string()
+        .optional()
+        .describe('Optional rule module ID to apply (e.g. "ram_ddr5", "ram", "matx_motherboard", "psu_sfx")'),
       token: z
         .string()
         .optional()
@@ -148,12 +164,16 @@ export function registerTools(server: McpServer): void {
       domain,
       minPrice,
       maxPrice,
+      maxPricePerGB,
       sortBy,
       maxItems,
       timeoutSecs,
+      skipAiVision,
+      ruleModuleId,
       token
     }) => {
       try {
+        console.error(`\n[Vinted Scraper] 🔎 Avvio ricerca Vinted: query="${searchQuery}", domain="${domain}", minPrice=${minPrice ?? 'N/D'}, maxPrice=${maxPrice ?? 'N/D'}, maxItems=${maxItems}, sortBy="${sortBy}"`);
         const result = await runVintedScraper({
           searchQuery,
           domain,
@@ -164,18 +184,40 @@ export function registerTools(server: McpServer): void {
           timeoutSecs,
           token
         });
+        console.error(`[Vinted Scraper] 📦 Recuperati ${result.items.length} articoli da Vinted (Dataset Apify: ${result.datasetUrl})`);
 
-        const markdownSummary = formatVintedItemsMarkdown(result.items);
+        const aiConfig = getAiConfig();
+        const shouldRunAi = !skipAiVision && aiConfig.isEnabled && (aiConfig.apiKey || process.env.AI_API_KEY);
+
+        let finalReport = '';
+        let aiResult: any = null;
+
+        if (shouldRunAi && result.items.length > 0) {
+          try {
+            aiResult = await inspectListingsWithAi(result.items, {
+              targetQuery: searchQuery,
+              maxPricePerGB,
+              ruleModuleId: ruleModuleId || (searchQuery.toLowerCase().includes('ddr5') ? 'ram_ddr5' : 'ram'),
+              maxItemsToInspect: maxItems
+            });
+            finalReport = aiResult.markdownReport;
+          } catch (aiErr: any) {
+            console.error('[Vinted Scraper] AI Inspection error fallback:', aiErr);
+            finalReport = `⚠️ **Nota:** Analisi AI non riuscita (${aiErr.message}), mostro risultati standard.\n\n` + formatVintedItemsMarkdown(result.items);
+          }
+        } else {
+          finalReport = formatVintedItemsMarkdown(result.items);
+        }
 
         return {
           content: [
             {
               type: 'text',
-              text: `### Risultati Ricerca Vinted per "${searchQuery}"\n- **Dominio:** ${domain}\n- **Articoli estratti:** ${result.items.length} (Totale nel dataset: ${result.itemsCount})\n- **Dataset Apify:** [Console Apify Dataset](${result.datasetUrl})\n\n---\n\n${markdownSummary}`
+              text: `### Risultati Ricerca Vinted per "${searchQuery}"\n- **Dominio:** ${domain}\n- **Articoli estratti:** ${result.items.length} (Totale nel dataset: ${result.itemsCount})\n- **Dataset Apify:** [Console Apify Dataset](${result.datasetUrl})\n\n---\n\n${finalReport}`
             },
             {
               type: 'text',
-              text: `JSON Risultati:\n\`\`\`json\n${JSON.stringify(result.items, null, 2)}\n\`\`\``
+              text: `JSON Risultati:\n\`\`\`json\n${JSON.stringify(aiResult ? aiResult : result.items, null, 2)}\n\`\`\``
             }
           ]
         };

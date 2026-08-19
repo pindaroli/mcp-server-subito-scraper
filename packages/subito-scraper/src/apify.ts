@@ -58,7 +58,7 @@ export async function runSubitoScraper(options: ScrapeSubitoOptions): Promise<Ap
     maxItems: actorMaxItems
   };
 
-  const runOptions: { timeout?: number; memory?: number; waitSecs?: number } = {};
+  const runOptions: { timeout?: number; memory?: number; waitSecs?: number; log: null } = { log: null };
   if (options.timeoutSecs) {
     runOptions.timeout = options.timeoutSecs;
     runOptions.waitSecs = options.timeoutSecs;

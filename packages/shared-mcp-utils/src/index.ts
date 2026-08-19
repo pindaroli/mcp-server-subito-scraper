@@ -4,10 +4,20 @@ import { fileURLToPath } from 'url';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 
+export * from './ai-inspector.js';
+
+export interface DeterministicFilters {
+  exclude_capacities_gb?: number[];
+  exclude_keywords?: string[];
+  exclude_part_number_prefixes?: string[];
+  require_keywords?: string[];
+}
+
 export interface ComponentRule {
   name?: string;
   description?: string;
   rules: string;
+  deterministic_filters?: DeterministicFilters;
 }
 
 export interface GlobalInstructions {
@@ -20,7 +30,7 @@ function getRulesDir(subPath: string): string {
   return path.join(currentDir, subPath);
 }
 
-function getOverrideDir(): string | null {
+export function getOverrideDir(): string | null {
   if (process.env.HARDWARE_RULES_DIR) {
     return process.env.HARDWARE_RULES_DIR;
   }
@@ -43,7 +53,7 @@ function readJsonFile(filePath: string): any {
   return null;
 }
 
-function getGlobalInstructions(): GlobalInstructions {
+export function getGlobalInstructions(): GlobalInstructions {
   let instructions: GlobalInstructions | null = null;
   const overrideDir = getOverrideDir();
   
@@ -57,7 +67,7 @@ function getGlobalInstructions(): GlobalInstructions {
   return instructions || { global_instructions: [] };
 }
 
-function getComponentRule(moduleId: string): ComponentRule | null {
+export function getComponentRule(moduleId: string): ComponentRule | null {
   const filename = `${moduleId}.json`;
   const overrideDir = getOverrideDir();
   
@@ -72,7 +82,7 @@ function getComponentRule(moduleId: string): ComponentRule | null {
   return rule;
 }
 
-function listAvailableModules(): Record<string, string> {
+export function listAvailableModules(): Record<string, string> {
   const modules: Record<string, string> = {};
   
   const scanDir = (dirPath: string) => {

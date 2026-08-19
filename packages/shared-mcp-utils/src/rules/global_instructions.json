@@ -1,10 +1,10 @@
 {
-  "max_visual_inspections": 20,
+  "max_visual_inspections": 30,
   "global_instructions": [
-    "1. ANALISI DEL CORPO DEL TESTO: Estrai tutte le informazioni tecniche, descrizioni e note dal corpo dell'annuncio, senza limitarti al titolo (spesso incompleto, generico o errato).",
-    "2. VERIFICA FOTOGRAFICA & SERIALI: Ispeziona attentamente tutte le immagini allegate cercando l'etichetta del produttore per individuare il Part Number (P/N), modello esatto e numero seriale.",
-    "3. DECODIFICA & CONFERMA DATASHEET: Verifica la sigla/P/N identificato confrontandolo con i pattern ufficiali del produttore per confermare form-factor reale (es. DIMM vs SO-DIMM), frequenza, timing, tensione e capacità effettiva per modulo/kit.",
-    "4. POLITICA 'ZERO ASSUNZIONI': Se le fotografie sono sfuocate, il prodotto è chiuso in scatola generica senza etichetta leggibile, o mancano prove inequivocabili del codice esatto, SCARTA categoricamente l'annuncio.",
-    "5. REPORT STRUTTURATO: Genera una tabella Markdown finale con: Prezzo, Prezzo Unitario (es. €/GB), Condizione, Part Number verificato da etichetta/testo e Link diretto."
+    "1. ANALISI DEL CORPO DEL TESTO & METADATI: Estrai tutte le informazioni tecniche, descrizioni, note e URL slug dall'annuncio, senza limitarti al solo titolo.",
+    "2. ISPEZIONE MULTI-FOTO & SUFFICIENZA PROVE: Ispeziona attentamente tutte le immagini fornite nell'annuncio. BASTA CHE ALMENO UNA FOTO (o la combinazione coerente di foto, titolo e descrizione) mostri chiaramente l'etichetta del produttore, il Part Number (P/N), o il form factor compatibile per considerarlo valido.",
+    "3. GESTIONE FOTO NON NITIDE: La presenza di singole fotografie sfocate, parziali o raffiguranti solo la confezione NON deve causare lo scarto dell'annuncio se le altre foto o i dettagli tecnici forniti sono conformi.",
+    "4. CRITERI DI SCARTO CATEGORICO: SCARTA l'annuncio SOLO se TUTTE le foto e le descrizioni sono completamente illeggibili/insufficienti, oppure se dalle foto o dal testo emerge inequivocabilmente che si tratta di un prodotto non conforme (es. form factor incompatibile come SO-DIMM laptop, generazione diversa, GPU/scheda video, accessorio o prezzo per unità superiore al limite).",
+    "5. REPORT STRUTTURATO: Genera una classificazione chiara con Prezzo, Prezzo Unitario (es. €/GB), Condizione, Part Number rilevato/verificato e Link diretto."
   ]
 }

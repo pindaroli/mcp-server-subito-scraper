@@ -6,16 +6,17 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "tsc && cp -r src/rules dist/rules || true",
+    "build": "tsc && mkdir -p dist/rules && cp -r src/rules/. dist/rules/",
     "watch": "tsc -w",
     "clean": "rm -rf dist tsconfig.tsbuildinfo"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.6.0",
+    "sharp": "^0.35.3",
     "zod": "^3.24.1"
   },
   "devDependencies": {
-    "typescript": "^5.7.3",
-    "@types/node": "^22.13.4"
+    "@types/node": "^22.13.4",
+    "typescript": "^5.7.3"
   }
 }

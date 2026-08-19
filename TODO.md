@@ -1,5 +1,10 @@
 # TODO & Roadmap
 
+## 📌 Risoluzione Dicotomia e Unificazione Regole RAM (`ram.json` vs `ram_ddr5.json`)
+- [ ] **Unificazione/Gerarchia Regole RAM:**
+  - Risolvere la dicotomia tra la regola generica parametrica `ram.json` (che gestisce DDR3, DDR4, DDR5, SO-DIMM e Desktop) e la regola specifica `ram_ddr5.json` (dedicata a DDR5 Desktop).
+  - Valutare un'architettura modulare a ereditarietà o a profili (`ram.base.json` + preset `profiles/ddr5_desktop.json`, `profiles/ddr4_laptop.json`), eliminando duplicazioni nei criteri di decodifica e filtri deterministici.
+
 ## 📌 Risoluzione Ambiguità nei Parser MCP ed Evidenza Hardware (DIMM vs SODIMM)
 
 ### 🎯 Problema Rilevato

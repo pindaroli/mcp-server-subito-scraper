@@ -11,7 +11,7 @@ Monorepo TypeScript basato su **NPM Workspaces** per lo sviluppo, test e deploym
 ## 📁 Struttura del Repository
 
 ```
-oli-mcp-serves/
+oli-II-Hands-searcher-mcp-server/
 ├── package.json                 # Configurazione root e script globali (NPM Workspaces)
 ├── tsconfig.base.json           # Configurazione TypeScript condivisa
 ├── mcp_config.json              # Configurazione client MCP con tutti i server registrati
@@ -19,12 +19,9 @@ oli-mcp-serves/
 ├── README.md                    # Questo file
 │
 └── packages/                    # Directory contenente i singoli server MCP
-    └── subito-scraper/          # Server MCP per scraping Subito.it (via Apify)
-        ├── package.json
-        ├── tsconfig.json
-        ├── README.md
-        ├── src/
-        └── test/
+    ├── shared-mcp-utils/        # Utility condivise, prompt e regole hardware
+    ├── subito-scraper/          # Server MCP per scraping Subito.it (via Apify)
+    └── vinted-scraper/          # Server MCP per scraping Vinted (via Apify)
 ```
 
 ---
@@ -34,6 +31,8 @@ oli-mcp-serves/
 | Server | Directory | Descrizione |
 | :--- | :--- | :--- |
 | **`mcp-server-subito-scraper`** | [`packages/subito-scraper`](./packages/subito-scraper) | Ricerca e scraping di annunci su Subito.it tramite Apify Actor. |
+| **`mcp-server-vinted-scraper`** | [`packages/vinted-scraper`](./packages/vinted-scraper) | Ricerca e scraping di annunci su Vinted (Italia ed Europa) tramite Apify Actor. |
+| **`shared-mcp-utils`** | [`packages/shared-mcp-utils`](./packages/shared-mcp-utils) | Prompting specializzato e moduli di regole per la validazione hardware. |
 
 ---
 
@@ -140,9 +139,22 @@ Usa la configurazione aggregata `mcp_config.json` per registrare i server nei tu
   "mcpServers": {
     "subito-scraper": {
       "command": "node",
-      "args": ["/percorso/assoluto/oli-mcp-serves/packages/subito-scraper/dist/index.js"],
+      "args": [
+        "/Users/olindo/prj/oli-II-Hands-searcher-mcp-server/packages/subito-scraper/dist/index.js"
+      ],
       "env": {
-        "APIFY_TOKEN": "il_tuo_token_apify"
+        "APIFY_TOKEN": "il_tuo_token_apify",
+        "HARDWARE_RULES_DIR": "/Users/olindo/prj/oli-II-Hands-searcher-mcp-server/packages/shared-mcp-utils/dist/rules"
+      }
+    },
+    "vinted-scraper": {
+      "command": "node",
+      "args": [
+        "/Users/olindo/prj/oli-II-Hands-searcher-mcp-server/packages/vinted-scraper/dist/index.js"
+      ],
+      "env": {
+        "APIFY_TOKEN": "il_tuo_token_apify",
+        "HARDWARE_RULES_DIR": "/Users/olindo/prj/oli-II-Hands-searcher-mcp-server/packages/shared-mcp-utils/dist/rules"
       }
     }
   }

@@ -1,10 +1,14 @@
 #!/usr/bin/env node
 
 import 'dotenv/config';
+import log, { LogLevel } from '@apify/log';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { registerTools } from './tools.js';
 import { registerHardwarePrompt } from 'shared-mcp-utils';
+
+// Ensure Apify logger doesn't emit ANSI escape characters or pollute stdio
+log.setLevel(LogLevel.OFF);
 
 const SERVER_NAME = 'mcp-server-vinted-scraper';
 const SERVER_VERSION = '1.0.0';
