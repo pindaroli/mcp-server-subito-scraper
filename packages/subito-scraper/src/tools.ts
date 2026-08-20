@@ -8,7 +8,7 @@ import {
   SUBITO_ACTOR_ID
 } from './apify.js';
 import { buildSubitoSearchUrl } from './url-builder.js';
-import { inspectListingsWithAi, getAiConfig, detectRuleModuleId } from 'shared-mcp-utils';
+import { inspectListingsWithAi, getAiConfig, resolveRuleModuleId } from 'shared-mcp-utils';
 
 /**
  * Formats scraped items into clean markdown for display to LLM / user
@@ -275,10 +275,11 @@ export function registerTools(server: McpServer): void {
 
         if (shouldRunAi && result.items.length > 0) {
           try {
+            const effectiveModuleId = await resolveRuleModuleId(query, ruleModuleId);
             aiResult = await inspectListingsWithAi(result.items, {
               targetQuery: query,
               maxPricePerGB,
-              ruleModuleId: ruleModuleId || detectRuleModuleId(query),
+              ruleModuleId: effectiveModuleId,
               maxItemsToInspect: maxItems,
               apifyStats: result.stats,
               datasetUrl: result.datasetUrl

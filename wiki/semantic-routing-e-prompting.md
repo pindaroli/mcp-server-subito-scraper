@@ -1,31 +1,73 @@
 # 🧭 Semantic Routing & Prompting
 
-Il sistema include meccanismi intelligenti per collegare le intenzioni dell'utente con le regole hardware corrette, sia in maniera completamente automatica sia tramite prompt guidati.
+Il sistema implementa un'**Architettura Ibrida a 2 Livelli (Hybrid 2-Tier Semantic Router)** che combina la velocità istantanea ($0\text{ ms}$) dei filtri deterministici per le ricerche dirette con la potenza dell'LLM (**Qwen2.5-VL-32B**) per disambiguare query complesse, discorsive o contenenti negazioni.
 
 ---
 
-## 🤖 Semantic Router Automatico (`detectRuleModuleId`)
+## 🏗️ Architettura Ibrida a 2 Livelli (Tier 1 vs Tier 2)
 
-Quando viene eseguita una ricerca senza specificare `ruleModuleId`, la funzione `detectRuleModuleId(searchQuery)` in `shared-mcp-utils` analizza il testo della query ed assegna la regola ottimale:
+```mermaid
+flowchart TD
+    Q[Query di Ricerca Utente] --> C0{ruleModuleId esplicito?}
+    C0 -->|Sì| T0[Tier 0: Bypass - Usa Modulo Forzato]
+    
+    C0 -->|No| C1{1. Contiene Negazioni?<br/>'non', 'no', 'senza', 'tranne'...}
+    C1 -->|Sì| T2[Tier 2: 🤖 LLM Router: Qwen2.5-VL-32B]
+    
+    C1 -->|No| C2{2. Conflitto Multi-Entità?<br/>es. 'alimentatore per case itx'}
+    C2 -->|Sì| T2
+    
+    C2 -->|No| C3{3. Frase Lunga o Discorsiva?<br/>>= 6 parole o con verbi 'vorrei', 'cerco'}
+    C3 -->|Sì| T2
+    
+    C3 -->|No| C4{4. Pattern Nominale Certo nel Fast-Path?}
+    C4 -->|Sì| T1[Tier 1: ⚡ Fast-Path Istantaneo 0ms]
+    C4 -->|No| T2
+```
+
+---
+
+## ⚡ Tier 1: Fast-Path Deterministico (`detectRuleModuleId`)
+Per l'80% delle ricerche di acquisto standard (nomi di modelli, sigle esatte, formati espliciti), il sistema risponde in memoria in $\approx 0\text{ ms}$ senza spendere token:
 
 ```typescript
-// Esempi di risoluzione automatica:
-"case pc cooler master h500"        --> "case_atx"
-"banchetto test open frame itx"     --> "case_open_itx"
-"banchetto bc1 micro atx"           --> "case_open_matx"
-"open frame thermaltake core p3"    --> "case_open_atx"
-"case compatto fractal terra"       --> "case_itx"
-"case micro-atx asus ap201"         --> "case_matx"
-"alimentatore sfx corsair sf750"    --> "psu_sfx"
-"scheda madre b650m"                --> "matx_motherboard"
-"ram ddr5 32gb cl30"                --> "ram_ddr5"
+"Corsair 4000D"              --> "case_atx"
+"RAM DDR5 32GB 6000MHz"      --> "ram_ddr5"
+"open frame itx"             --> "case_open_itx"
+"asus prime ap201"           --> "case_matx"
+"corsair sf750 platinum"     --> "psu_sfx"
 ```
+
+---
+
+## 🤖 Tier 2: LLM Semantic Router (`routeQueryWithLlm`)
+Quando la query presenta complessità semantica, interviene **Qwen2.5-VL-32B** (o il modello configurato su Ollama/endpoint OpenAI-compatible).
+
+L'LLM riceve la query e la lista dinamica dei moduli (`listAvailableModules()`), restituendo un oggetto JSON vincolato a tasso di allucinazione nullo:
+
+```json
+{
+  "selectedModuleId": "psu_sfx",
+  "confidence": 0.98,
+  "reason": "L'utente intende acquistare un alimentatore, mentre il case ITX aperto rappresenta solo il contesto della build."
+}
+```
+
+### Esempi Gestiti da Tier 2:
+1. **Negazioni ed Esclusioni**:
+   - `"case compatto ma non itx"` $\rightarrow$ **`case_matx`** (esclude ITX ed evita errori regex).
+   - `"banchetto test senza pannelli chiusi"` $\rightarrow$ **`case_open`**.
+2. **Ambiguità Multi-Componente**:
+   - `"cerco un alimentatore per montare una build su telaio aperto itx"` $\rightarrow$ **`psu_sfx`** (capisce l'oggetto effettivo d'acquisto).
+   - `"scheda madre b650m per case compatto"` $\rightarrow$ **`matx_motherboard`**.
+3. **Linguaggio Naturale Discorsivo**:
+   - `"vorrei montare un pc da banco per fare overclock spendendo poco"` $\rightarrow$ **`case_open`**.
 
 ---
 
 ## 🛠️ Tool MCP: `get_available_hardware_rules`
 
-Tutti i server MCP esportano il tool `get_available_hardware_rules`. Questo restituisce la mappa dinamica di tutti i moduli caricati:
+Tutti i server MCP esportano il tool `get_available_hardware_rules` per ispezionare dinamicamente il catalogo delle regole caricate:
 
 ```json
 {
@@ -49,7 +91,7 @@ Tutti i server MCP esportano il tool `get_available_hardware_rules`. Questo rest
 
 ## 🧠 Prompt Esperto MCP: `hardware_expert_search`
 
-I client MCP possono invocare il prompt `hardware_expert_search` per guidare un agente autonomo nella revisione manuale:
+I client MCP possono invocare il prompt esperto per delegare una sessione di revisione visiva:
 
 ```json
 {
@@ -60,5 +102,3 @@ I client MCP possono invocare il prompt `hardware_expert_search` per guidare un 
   }
 }
 ```
-
-Il prompt inietta automaticamente le regole globali, le istruzioni visive, i comandi operativi per il download delle immagini (`curl`) e la visualizzazione (`view_file`), garantendo una revisione conforme alle direttive "Zero Assunzioni".

@@ -8,7 +8,7 @@ import {
   WALLAPOP_ACTOR_ID
 } from './apify.js';
 import { buildWallapopSearchUrl } from './url-builder.js';
-import { inspectListingsWithAi, getAiConfig, detectRuleModuleId } from 'shared-mcp-utils';
+import { inspectListingsWithAi, getAiConfig, resolveRuleModuleId } from 'shared-mcp-utils';
 
 /**
  * Formats scraped Wallapop items into clean markdown for fallback display
@@ -217,10 +217,11 @@ export function registerTools(server: McpServer): void {
 
         if (shouldRunAi && result.items.length > 0 && !result.items[0]?.no_results) {
           try {
+            const effectiveModuleId = await resolveRuleModuleId(query, ruleModuleId);
             aiResult = await inspectListingsWithAi(result.items, {
               targetQuery: query,
               maxPricePerGB,
-              ruleModuleId: ruleModuleId || detectRuleModuleId(query),
+              ruleModuleId: effectiveModuleId,
               maxItemsToInspect: maxItems,
               apifyStats: result.stats,
               datasetUrl: result.datasetUrl

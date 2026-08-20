@@ -94,7 +94,7 @@ interface NormalizedListing {
 export function getAiConfig() {
   const baseUrl = (process.env.AI_BASE_URL || 'http://localhost:11434/v1').trim().replace(/\/+$/, '');
   const apiKey = (process.env.AI_API_KEY || process.env.AI_TOKEN || 'ollama').trim();
-  const model = (process.env.AI_MODEL || 'qwen2.5vl').trim();
+  const model = (process.env.AI_MODEL || 'qwen2.5-vl:32b').trim();
   const isEnabled = process.env.AI_VISION_ENABLED !== 'false';
   const maxInspections = parseInt(process.env.MAX_AI_INSPECTIONS || '20', 10);
 
