@@ -15,14 +15,30 @@ oli-II-Hands-searcher-mcp-server/
 ├── package.json                 # Configurazione root e script globali (NPM Workspaces)
 ├── tsconfig.base.json           # Configurazione TypeScript condivisa
 ├── mcp_config.json              # Configurazione client MCP con tutti i server registrati
+├── hardware_rules.json          # Database centrale di regole hardware sincrone
+├── wiki/                        # 📚 Documentazione & Wiki ufficiale del progetto
+│   ├── Home.md                  # Portale principale del Wiki
+│   ├── architettura-monorepo.md # Architettura NPM Workspaces e flusso MCP
+│   ├── regole-hardware.md       # Matrice ortogonale e regole Zero Assunzioni
+│   ├── semantic-routing-e-prompting.md # Routing automatico e prompt
+│   ├── server-scraper.md        # Scraper Vinted, Subito.it, Wallapop
+│   ├── ai-vision-inspector.md   # Pipeline a 3 fasi e ispezione multimodale
+│   └── guida-sviluppo-e-testing.md # Build, testing ed estensione
 ├── .gitignore
 ├── README.md                    # Questo file
 │
 └── packages/                    # Directory contenente i singoli server MCP
     ├── shared-mcp-utils/        # Utility condivise, prompt e regole hardware
     ├── subito-scraper/          # Server MCP per scraping Subito.it (via Apify)
-    └── vinted-scraper/          # Server MCP per scraping Vinted (via Apify)
+    ├── vinted-scraper/          # Server MCP per scraping Vinted (via Apify)
+    └── wallapop-scraper/        # Server MCP per scraping Wallapop (via Apify)
 ```
+
+---
+
+## 📚 Documentazione & Wiki Ufficiale
+
+Per la documentazione completa e approfondita, consulta il [**Wiki del Progetto**](./wiki/Home.md).
 
 ---
 
@@ -32,7 +48,8 @@ oli-II-Hands-searcher-mcp-server/
 | :--- | :--- | :--- |
 | **`mcp-server-subito-scraper`** | [`packages/subito-scraper`](./packages/subito-scraper) | Ricerca e scraping di annunci su Subito.it tramite Apify Actor. |
 | **`mcp-server-vinted-scraper`** | [`packages/vinted-scraper`](./packages/vinted-scraper) | Ricerca e scraping di annunci su Vinted (Italia ed Europa) tramite Apify Actor. |
-| **`shared-mcp-utils`** | [`packages/shared-mcp-utils`](./packages/shared-mcp-utils) | Prompting specializzato e moduli di regole per la validazione hardware. |
+| **`mcp-server-wallapop-scraper`** | [`packages/wallapop-scraper`](./packages/wallapop-scraper) | Ricerca e scraping di annunci su Wallapop (Italia e Spagna) tramite Apify Actor. |
+| **`shared-mcp-utils`** | [`packages/shared-mcp-utils`](./packages/shared-mcp-utils) | Prompting specializzato, AI Inspector e moduli di regole per la validazione hardware. |
 
 ---
 

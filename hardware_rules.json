@@ -49,6 +49,244 @@
       "name": "Alimentatore SFX / SFX-L",
       "description": "Alimentatori compatti per case Small Form Factor (SFF)",
       "rules": "FORM FACTOR:\n- ACCETTA: Alimentatori in standard SFX (125 x 100 x 63.5 mm) o SFX-L (125 x 125 x 63.5 mm).\n- SCARTA: Alimentatori ATX standard (150 x 140/160 x 86 mm) e formati proprietari/TFX/Flex-ATX se non richiesti."
+    },
+    "case_pc": {
+      "name": "Case PC (Generico)",
+      "description": "Regola unificata per tutti i formati (ATX, Micro-ATX, Mini-ITX) e tipologie strutturali (Chiuso / Open Frame / Banchetto)",
+      "rules": "L'utente sta specificamente cercando: [{{user_target_specs}}].\n\nMATRICE DI CLASSIFICAZIONE A 2 DIMENSIONI INDIPENDENTI (ORTOGONALI):\n1. DIMENSIONE 1: TIPOLOGIA STRUTTURALE (Chiuso vs Aperto)\n   - CASE CHIUSO: Chassis convenzionale con telaio perimetrale e paratie laterali (vetro temperato, mesh forata o alluminio/acciaio pieno). Es. Mid-Tower, Mini-Tower, Cubo chiuso, Sandwich SFF.\n   - CASE APERTO / OPEN BENCH: Struttura 'Open Frame' o 'Banchetto da test/esposizione' nativamente priva di paratie perimetrali chiuse (es. Open Benchtable, XTIA Xproto, Thermaltake Core P-series, DimasTech, telai in estruso di alluminio).\n   - NOTA: L'essere 'Open Bench' NON è alternativo ad ATX/mATX/ITX: un banchetto/open frame ha sempre una compatibilità di scheda madre (es. Open Benchtable ATX, Hydra Mini ITX).\n\n2. DIMENSIONE 2: FORM FACTOR SCHEDA MADRE SUPPORTATA\n   - ATX / E-ATX: Supporta schede madri standard ATX (305 x 244 mm). Riconoscibile da >= 7 slot PCIe posteriori (o predisposizione piastra per 7 slot nel caso open frame/banchetto).\n   - Micro-ATX (mATX): Supporta schede madri mATX (244 x 244 mm). Riconoscibile da 4 o 5 slot PCIe posteriori.\n   - Mini-ITX (ITX / SFF): Supporta schede madri compatte ITX (170 x 170 mm). Riconoscibile da 1-3 slot PCIe posteriori e volume ultra-compatto (< 20 litri).\n\n3. SCARTO DETERMINISTICO FALSI POSITIVI:\n   - SCARTA: Borse/custodie per notebook (es. 'Case Logic', borse neoprene), ventole per PC sfuse ('case fan'), cavi/adattatori, supporti rialzati da scrivania senza attacchi motherboard, case danneggiati con paratie mancanti spacciati per aperti.",
+      "deterministic_filters": {
+        "exclude_keywords": [
+          "case logic",
+          "custodia pc",
+          "custodia porta pc",
+          "borsa pc",
+          "borsa porta pc",
+          "sleeve",
+          "sacoche",
+          "porta pc rialzato",
+          "supporto monitor",
+          "stand pc",
+          "ventola pc",
+          "ventola 120mm",
+          "ventola 140mm",
+          "case fan",
+          "ventilateur pc",
+          "luefter",
+          "filtro antipolvere",
+          "griglia ventola",
+          "cavo riser",
+          "pasta termica",
+          "cover tastiera",
+          "vetro ricambio"
+        ]
+      }
+    },
+    "case_closed": {
+      "name": "Case PC Chiuso (Standard Chassis / Torre / Cubo)",
+      "description": "Chassis per PC tradizionale chiuso con pannelli laterali (metallo/mesh/vetro temperato)",
+      "rules": "CRITERI DI VERIFICA CASE CHIUSO:\n- ACCETTA: Case per PC con struttura chiusa perimetrale, paratie laterali presenti (vetro temperato, metallo solido o mesh forata), alloggiamento per scheda madre interno e alloggiamento PSU.\n- TIPOLOGIE INCLUSE: Full-Tower, Mid-Tower, Mini-Tower, Cubo chiuso, SFF chiuso a sandwich (es. NZXT serie H, Corsair 4000D/5000D, Cooler Master MasterBox, Fractal Design Meshify/Terra/North, Lian Li O11/Lancool, Be Quiet Pure Base, Phanteks XT Pro).\n- SCARTA: Telai aperti / banchetti da test (Open Frame, Bench Table), carrelli/supporti porta PC su ruote, borse per laptop, e case gravemente danneggiati o mancanti di entrambe le paratie laterali strutturali.",
+      "deterministic_filters": {
+        "exclude_keywords": [
+          "open frame",
+          "bench table",
+          "banchetto test",
+          "banchetto prova",
+          "open air frame",
+          "mining frame",
+          "telaio aperto",
+          "custodia",
+          "borsa",
+          "case logic",
+          "sleeve",
+          "ventola",
+          "fan"
+        ]
+      }
+    },
+    "case_open": {
+      "name": "Case PC Aperto / Open Frame / Banchetto di Test",
+      "description": "Struttura aperta per PC (Open Frame, Bench Table, banchetto da test / esposizione) per formati ATX, mATX o Mini-ITX",
+      "rules": "CRITERI DI VERIFICA CASE APERTO (OPEN FRAME / BENCH TABLE):\n- DEFINIZIONE: 'Open Bench / Open Frame' descrive la tipologia costruttiva (struttura aperta a giorno, priva di pannelli perimetrali chiusi o con solo pannello frontale/distanziatore). NON è alternativo al formato della scheda madre: esistono banchetti e open-frame ATX, Micro-ATX o Mini-ITX.\n- ACCETTA: Telai e banchetti progettati nativamente aperti per test, bench o esposizione (es. Open Benchtable BC1 / Streacom DA6 / XTIA Xproto / Hydra Mini o Hydra Desk / Thermaltake Core P1, P3, P5, P7, P90 / DimasTech / QDIY / telai in profilati di alluminio 2020 o 2040).\n- SCARTA: Case tradizionali chiusi (Mid-Tower, Full-Tower, ecc.).\n- SCARTA: Case standard tradizionali a cui è stato semplicemente rimosso il pannello laterale (un case chiuso incompleto NON è un open frame).\n- SCARTA: Supporti e carrelli da scrivania/pavimento privi di alloggiamento e distanziali per scheda madre.",
+      "deterministic_filters": {
+        "require_keywords": [
+          "open",
+          "frame",
+          "bench",
+          "banchetto",
+          "aperto",
+          "telaio",
+          "xproto",
+          "dimastech",
+          "streacom da6",
+          "core p"
+        ],
+        "exclude_keywords": [
+          "custodia",
+          "borsa",
+          "case logic",
+          "sleeve",
+          "mid-tower",
+          "full-tower"
+        ]
+      }
+    },
+    "case_open_atx": {
+      "name": "Case PC Open Frame ATX (Open Bench ATX / E-ATX)",
+      "description": "Struttura aperta / banchetto da test / telaio open-air specificamente per schede madri ATX ed E-ATX standard (305x244 mm)",
+      "rules": "L'utente cerca specificamente: [Open Frame ATX / Banchetto ATX].\n\nCRITERI DI VERIFICA CASE APERTO ATX (INTERSEZIONE DI 2 CRITERI):\n1. CRITERIO STRUTTURALE (OPEN FRAME / BANCHETTO):\n   - ACCETTA: Solo strutture progettate nativamente aperte a giorno (Open Frame, Bench Table da banco, telai aperti in profilati di alluminio o pannelli verticali a vista).\n   - SCARTA: Case chiusi tradizionali ATX (es. Corsair 4000D/5000D, NZXT H5/H7, Phanteks XT Pro, Fractal Meshify anche se privi temporaneamente di paratia).\n   - SCARTA: Supporti da pavimento su ruote o ripiani scrivania privi di piastra e distanziali per scheda madre.\n\n2. CRITERIO FORM FACTOR (ATX / E-ATX):\n   - ACCETTA: Strutture in grado di alloggiare schede madri formato ATX standard (305 x 244 mm) o E-ATX, con supporto/staffa per >= 7 slot di espansione PCIe e alimentatori ATX standard.\n   - SCARTA: Banchetti o telai aperti ultra-compatti dedicati esclusivamente a Mini-ITX (es. XTIA Xproto-Mini, Hydra Mini, Open Benchtable BC1 Mini).\n\n3. MODELLI DI RIFERIMENTO CONFERMATI:\n   - Open Benchtable BC1 (Full Size)\n   - Thermaltake Core P3 / Core P5 / Core P7 / Core P8 / Core P90 (in configurazione aperta)\n   - XTIA Xproto-ATX / Xproto-L con supporto ATX\n   - DimasTech Bench/Test Table Easy V3.0 / EasyDual / Pro\n   - Hydra Desk / Hydra Open Frame ATX\n   - Telai modulari in estruso di alluminio 2020/2040 per schede madri ATX\n   - QDIY Professional Open Frame ATX (acrilico / alluminio)",
+      "deterministic_filters": {
+        "require_keywords": [
+          "open",
+          "frame",
+          "bench",
+          "banchetto",
+          "aperto",
+          "telaio",
+          "bc1",
+          "core p3",
+          "core p5",
+          "core p7",
+          "core p",
+          "dimastech",
+          "xproto-atx",
+          "hydra"
+        ],
+        "exclude_keywords": [
+          "mid-tower",
+          "mid tower",
+          "full-tower",
+          "full tower",
+          "mini-itx only",
+          "itx only",
+          "custodia",
+          "borsa",
+          "case logic",
+          "sleeve",
+          "ventola",
+          "case fan"
+        ]
+      }
+    },
+    "case_open_matx": {
+      "name": "Case PC Open Frame Micro-ATX (Open Bench mATX)",
+      "description": "Struttura aperta / banchetto da test / telaio open-air compatto per schede madri Micro-ATX (244x244 mm)",
+      "rules": "L'utente cerca specificamente: [Open Frame Micro-ATX / Banchetto mATX].\n\nCRITERI DI VERIFICA CASE APERTO MICRO-ATX (INTERSEZIONE DI 2 CRITERI):\n1. CRITERIO STRUTTURALE (OPEN FRAME / BANCHETTO):\n   - ACCETTA: Solo strutture aperte a giorno, telai a vista, banchetti da banco o supporti aperti privi di paratie laterali chiuse convenzionali.\n   - SCARTA: Case chiusi Micro-ATX (es. ASUS Prime AP201, Cooler Master MasterBox Q300L, Thermaltake Versa H16/H18 chiusi).\n   - SCARTA: Case chiusi tradizionali con una sola paratia rimossa.\n\n2. CRITERIO FORM FACTOR (MICRO-ATX / mATX):\n   - ACCETTA: Strutture aperte o banchetti progettati per ospitare schede madri Micro-ATX (fino a 244 x 244 mm), con alloggiamento per 4 o 5 slot di espansione PCIe.\n   - SCARTA: Banchetti ultra-compatti esclusivi per Mini-ITX che non hanno spazio/staffe sufficienti per una scheda da 244 mm.\n\n3. MODELLI DI RIFERIMENTO CONFERMATI:\n   - DimasTech Mini / Bench Table Easy mATX\n   - QDIY Open Frame Micro-ATX (PC-D.003 / acrilico / alluminio)\n   - Banchetti modulari in profilati di alluminio 2020 compatti per schede mATX\n   - Open Benchtable BC1 (in configurazione media mATX)\n   - Hydra Open Frame compatibili mATX",
+      "deterministic_filters": {
+        "require_keywords": [
+          "open",
+          "frame",
+          "bench",
+          "banchetto",
+          "aperto",
+          "telaio",
+          "dimastech",
+          "qdiy",
+          "bc1"
+        ],
+        "exclude_keywords": [
+          "mid-tower",
+          "mid tower",
+          "full-tower",
+          "full tower",
+          "custodia",
+          "borsa",
+          "case logic",
+          "sleeve",
+          "ventola",
+          "case fan"
+        ]
+      }
+    },
+    "case_open_itx": {
+      "name": "Case PC Open Frame Mini-ITX (Open Bench ITX / SFF)",
+      "description": "Struttura aperta / banchetto da test / telaio open-air specificamente per schede madri Mini-ITX (170x170 mm)",
+      "rules": "L'utente cerca specificamente: [Open Frame Mini-ITX / Banchetto ITX].\n\nCRITERI DI VERIFICA CASE APERTO MINI-ITX (INTERSEZIONE DI 2 CRITERI):\n1. CRITERIO STRUTTURALE (OPEN FRAME / BANCHETTO):\n   - ACCETTA: Solo strutture aperte a giorno, telai a vista, banchetti da banco o chassis aperti verticali privi di paratie laterali chiuse convenzionali.\n   - SCARTA: Case chiusi tradizionali anche se compatti (es. Cooler Master NR200 chiuso, Fractal Terra chiuso, Lian Li A4-H2O chiuso).\n   - SCARTA: Case chiusi a cui manca accidentalmente una paratia laterale.\n\n2. CRITERIO FORM FACTOR (MINI-ITX / SFF):\n   - ACCETTA: Strutture progettate per schede madri Mini-ITX (170 x 170 mm), supporto alimentatori compatti (SFX, SFX-L, Pico-PSU o Flex-ATX) e GPU montata tramite riser PCIe a sandwich o su staffa compatta.\n   - SCARTA: Banchetti open frame di grandi dimensioni progettati per schede madri ATX/E-ATX (es. Open Benchtable BC1 full size, Thermaltake Core P5/P7, DimasTech Easy).\n\n3. MODELLI DI RIFERIMENTO CONFERMATI:\n   - XTIA Xproto / Xproto-N / Xproto-L / Xproto-Mini\n   - Open Benchtable BC1 Mini\n   - Hydra Mini / Hydra ITX\n   - Streacom DA6\n   - Jonsbo MOD-3 Mini\n   - Telai aperti modulari in alluminio/acrilico per Mini-ITX (es. QDIY ITX, Telai 2020 ITX)",
+      "deterministic_filters": {
+        "require_keywords": [
+          "open",
+          "frame",
+          "bench",
+          "banchetto",
+          "aperto",
+          "telaio",
+          "xproto",
+          "hydra mini",
+          "bc1 mini",
+          "da6"
+        ],
+        "exclude_keywords": [
+          "mid-tower",
+          "mid tower",
+          "full-tower",
+          "full tower",
+          "atx only",
+          "e-atx",
+          "custodia",
+          "borsa",
+          "case logic",
+          "sleeve",
+          "ventola",
+          "case fan"
+        ]
+      }
+    },
+    "case_atx": {
+      "name": "Case PC ATX (Mid-Tower / Full-Tower / Open Frame ATX)",
+      "description": "Chassis o struttura open-bench compatibile con schede madri formato ATX ed E-ATX standard",
+      "rules": "CRITERI DI VERIFICA CASE ATX:\n- DEFINIZIONE: Definisce la compatibilità con schede madri ATX standard (305 x 244 mm) ed E-ATX. Può presentarsi sia come case chiuso tradizionale (Mid-Tower / Full-Tower) sia come struttura aperta / open frame / banchetto (es. Thermaltake Core P3/P5, XTIA Xproto-ATX, Open Benchtable BC1).\n- ACCETTA: Case chiusi o open frame in grado di ospitare schede madri ATX standard. Riconoscibili da: altezza >= 40-45 cm e/o presenza di 7, 8 o più slot di espansione PCIe posteriori o staffe PCIe su banchetto.\n- ESEMPI MODELLI NOTI:\n  * Chiusi: NZXT H5/H7/H500/H510/H710, Corsair 3000D/4000D/5000D/7000D/275R, Phanteks XT Pro/Eclipse P300/P400/P500/NV5/NV7, Cooler Master MasterCase H500/TD500, Lian Li O11 Dynamic/Lancool 216/III, Fractal Meshify 2/Define 7/North/Pop Air, Be Quiet Pure Base 500.\n  * Aperti/Open Frame: Thermaltake Core P3/P5/P7, XTIA Xproto-ATX, Open Benchtable BC1, DimasTech Easy V3.0.\n- SCARTA: Case compatti Micro-ATX dedicati (max 4 slot PCIe) o Mini-ITX/SFF (1-3 slot PCIe) che NON supportano schede madri ATX da 305 mm.\n- SCARTA: Borse laptop, ventole sfuse e accessori.",
+      "deterministic_filters": {
+        "exclude_keywords": [
+          "mini-itx",
+          "mini itx",
+          "itx only",
+          "sff only",
+          "custodia",
+          "borsa",
+          "case logic",
+          "sleeve",
+          "ventola",
+          "case fan"
+        ]
+      }
+    },
+    "case_matx": {
+      "name": "Case PC Micro-ATX (mATX / Mini-Tower / Open Frame mATX)",
+      "description": "Chassis o banchetto compatto compatibile con schede madri Micro-ATX (mATX fino a 244x244 mm)",
+      "rules": "CRITERI DI VERIFICA CASE MICRO-ATX (mATX):\n- DEFINIZIONE: Definisce la compatibilità con schede madri Micro-ATX (fino a 244 x 244 mm). Può essere sia uno chassis chiuso (Mini-Tower / Cubo) sia una struttura aperta / banchetto da banco.\n- ACCETTA: Case chiusi o open frame progettati per schede madri Micro-ATX. Riconoscibili da: formato compatto, altezza tipicamente tra 35 e 40 cm, esattamente 4 o 5 slot di espansione PCIe posteriori o staffe PCIe su telaio.\n- ESEMPI MODELLI NOTI:\n  * Chiusi: ASUS Prime AP201, Cooler Master MasterBox Q300L / NR400, Thermaltake Versa H15/H16/H17/H18, Fractal Pop Mini / Define Mini, Jonsbo D30/D31, InWin 301, Montech Air 100, Mars Gaming MC-X2.\n  * Aperti/Open Frame: Banchetti mATX in alluminio/acrilico, QDIY mATX, DimasTech Mini.\n- SCARTA: Case Full-Tower o Mid-Tower ATX grandi (7+ slot PCIe) se l'utente cerca un form factor compatto mATX dedicato.\n- SCARTA: Case Mini-ITX ultra-compatti (< 20 litri, max 2 slot PCIe) incompatibili con schede Micro-ATX da 244 mm.\n- SCARTA: Borse laptop, ventole sfuse e accessori.",
+      "deterministic_filters": {
+        "exclude_keywords": [
+          "full-tower",
+          "full tower",
+          "e-atx",
+          "eatx",
+          "custodia",
+          "borsa",
+          "case logic",
+          "sleeve",
+          "ventola",
+          "fan"
+        ]
+      }
+    },
+    "case_itx": {
+      "name": "Case PC Mini-ITX (SFF / Open Frame ITX)",
+      "description": "Chassis ultra-compatto o open-bench per schede madri Mini-ITX (170x170 mm) e sistemi Small Form Factor",
+      "rules": "CRITERI DI VERIFICA CASE MINI-ITX (SFF):\n- DEFINIZIONE: Definisce la compatibilità con schede madri Mini-ITX (170 x 170 mm). Può essere uno chassis compatto chiuso (Sandwich / Cubo / Tower ITX con volume < 20 litri) oppure una struttura open frame / banchetto ultra-compatto (es. XTIA Xproto Mini-ITX, Hydra Mini, Open Benchtable BC1 Mini, Streacom DA6).\n- ACCETTA: Case chiusi o open frame progettati specificamente per schede madri Mini-ITX. Riconoscibili da: volume ridotto (< 20 litri), 1, 2 o max 3 slot PCIe posteriori o riser PCIe dedicato, alimentatori compatti SFX/SFX-L/Flex-ATX.\n- ESEMPI MODELLI NOTI:\n  * Chiusi: Cooler Master NR200/NR200P, Fractal Design Terra/Ridge/Node 202, Lian Li A4-H2O/Q58, SSUPD Meshlicious, FormD T1, Dan A4-SFX, Teenage Engineering Computer-1, NZXT H1/H210, Jonsbo T8.\n  * Aperti/Open Frame: XTIA Xproto / Xproto-Mini, Hydra Mini, Open Benchtable BC1 Mini, Streacom DA6, Jonsbo MOD-3 Mini.\n- SCARTA: Case Mid-Tower, Full-Tower o case Micro-ATX standard con volume > 25-30 litri.\n- SCARTA: Borse per portatili, ventole sfuse, accessori.",
+      "deterministic_filters": {
+        "exclude_keywords": [
+          "mid-tower",
+          "mid tower",
+          "full-tower",
+          "full tower",
+          "atx only",
+          "custodia",
+          "borsa",
+          "case logic",
+          "sleeve",
+          "ventola",
+          "fan"
+        ]
+      }
     }
   }
 }

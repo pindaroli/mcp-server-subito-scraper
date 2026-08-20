@@ -111,6 +111,44 @@ export function listAvailableModules(): Record<string, string> {
   return modules;
 }
 
+export function detectRuleModuleId(query: string): string {
+  const q = (query || '').toLowerCase();
+  const isOpen = q.includes('open') || q.includes('bench') || q.includes('banchetto') || q.includes('telaio aperto');
+  const isItx = q.includes('itx') || q.includes('sff') || q.includes('mini-itx') || q.includes('mini itx');
+  const isMatx = q.includes('matx') || q.includes('micro-atx') || q.includes('micro atx') || q.includes('microatx') || q.includes('m-atx');
+  const isAtx = q.includes('atx') || q.includes('mid-tower') || q.includes('mid tower') || q.includes('full-tower') || q.includes('full tower') || q.includes('e-atx');
+  const isCase = q.includes('case') || q.includes('chassis') || q.includes('torre') || q.includes('boitier') || q.includes('gehause') || q.includes('gabinete') || isOpen;
+
+  if (isOpen) {
+    if (isItx) return 'case_open_itx';
+    if (isMatx) return 'case_open_matx';
+    if (isAtx) return 'case_open_atx';
+    return 'case_open';
+  }
+
+  if (isCase) {
+    if (isItx) return 'case_itx';
+    if (isMatx) return 'case_matx';
+    if (isAtx) return 'case_atx';
+    if (q.includes('chiuso') || q.includes('closed')) return 'case_closed';
+    return 'case_pc';
+  }
+
+  if (q.includes('sfx') || q.includes('alimentatore') || q.includes('psu')) {
+    return 'psu_sfx';
+  }
+
+  if (q.includes('scheda madre') || q.includes('motherboard') || q.includes('mobo')) {
+    return 'matx_motherboard';
+  }
+
+  if (q.includes('ddr5')) {
+    return 'ram_ddr5';
+  }
+
+  return 'ram';
+}
+
 export function registerHardwarePrompt(server: McpServer) {
   server.tool(
     "get_available_hardware_rules",

@@ -7,7 +7,7 @@ import {
   formatApifyError,
   VINTED_ACTOR_ID
 } from './apify.js';
-import { inspectListingsWithAi, getAiConfig } from 'shared-mcp-utils';
+import { inspectListingsWithAi, getAiConfig, detectRuleModuleId } from 'shared-mcp-utils';
 
 /**
  * Formats scraped Vinted items into clean markdown for display to LLM / user
@@ -191,7 +191,7 @@ export function registerTools(server: McpServer): void {
             aiResult = await inspectListingsWithAi(result.items, {
               targetQuery: searchQuery,
               maxPricePerGB,
-              ruleModuleId: ruleModuleId || (searchQuery.toLowerCase().includes('ddr5') ? 'ram_ddr5' : 'ram'),
+              ruleModuleId: ruleModuleId || detectRuleModuleId(searchQuery),
               maxItemsToInspect: maxItems,
               apifyStats: result.stats,
               datasetUrl: result.datasetUrl

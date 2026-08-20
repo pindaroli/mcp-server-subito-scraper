@@ -1,0 +1,27 @@
+{
+  "name": "Case PC Aperto / Open Frame / Banchetto di Test",
+  "description": "Struttura aperta per PC (Open Frame, Bench Table, banchetto da test / esposizione) per formati ATX, mATX o Mini-ITX",
+  "rules": "CRITERI DI VERIFICA CASE APERTO (OPEN FRAME / BENCH TABLE):\n- DEFINIZIONE: 'Open Bench / Open Frame' descrive la tipologia costruttiva (struttura aperta a giorno, priva di pannelli perimetrali chiusi o con solo pannello frontale/distanziatore). NON è alternativo al formato della scheda madre: esistono banchetti e open-frame ATX, Micro-ATX o Mini-ITX.\n- ACCETTA: Telai e banchetti progettati nativamente aperti per test, bench o esposizione (es. Open Benchtable BC1 / Streacom DA6 / XTIA Xproto / Hydra Mini o Hydra Desk / Thermaltake Core P1, P3, P5, P7, P90 / DimasTech / QDIY / telai in profilati di alluminio 2020 o 2040).\n- SCARTA: Case tradizionali chiusi (Mid-Tower, Full-Tower, ecc.).\n- SCARTA: Case standard tradizionali a cui è stato semplicemente rimosso il pannello laterale (un case chiuso incompleto NON è un open frame).\n- SCARTA: Supporti e carrelli da scrivania/pavimento privi di alloggiamento e distanziali per scheda madre.",
+  "deterministic_filters": {
+    "require_keywords": [
+      "open",
+      "frame",
+      "bench",
+      "banchetto",
+      "aperto",
+      "telaio",
+      "xproto",
+      "dimastech",
+      "streacom da6",
+      "core p"
+    ],
+    "exclude_keywords": [
+      "custodia",
+      "borsa",
+      "case logic",
+      "sleeve",
+      "mid-tower",
+      "full-tower"
+    ]
+  }
+}
