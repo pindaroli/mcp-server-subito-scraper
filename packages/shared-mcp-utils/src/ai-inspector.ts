@@ -37,10 +37,14 @@ export interface AiInspectionVerdict {
   currency: string;
   brand: string;
   status: 'ACCEPTED' | 'REJECTED';
-  formFactor: 'UDIMM_DESKTOP' | 'SODIMM_LAPTOP' | 'ECC_SERVER' | 'ACCESSORY_OTHER' | 'UNKNOWN';
+  formFactor: string;
   detectedGeneration: string;
   detectedCapacityGB: number | null;
   detectedPartNumber: string | null;
+  detectedSerialNumber?: string | null;
+  detectedModel?: string | null;
+  smartHealth?: string | null;
+  infoSource?: 'PHOTO_LABEL_OCR' | 'PHOTO_SMART' | 'PHOTO_VISION' | 'TEXT_FALLBACK' | 'DETERMINISTIC_RULE';
   pricePerGB: number | null;
   rejectionReason: string | null;
   evidence: string;
@@ -111,20 +115,34 @@ export function getAiConfig() {
  * Normalizes URL, title, photos, and price extraction from listing item
  */
 function normalizeListing(item: ListingItem, index: number): NormalizedListing {
-  const rawUrl = item.url || item.link || item.item_url || item.listing_url || item.share_url || '';
+  const rawUrl = (
+    item.urls_default ||
+    item.urls_mobile ||
+    item.url ||
+    item.link ||
+    item.item_url ||
+    item.listing_url ||
+    item.share_url ||
+    ''
+  ).toString();
   const match = rawUrl.match(/\/(?:items|item)\/([^\/?#]+)/);
-  const id = String(item.id || item.item_id || (match ? match[1] : index + 1));
+  const id = String(item.id || item.item_id || item.advertiser_userId || (match ? match[1] : index + 1));
   const slug = item.slug ? String(item.slug).replace(/-/g, ' ') : (match && match[1] ? decodeURIComponent(match[1]).replace(/-/g, ' ') : '');
 
-  const rawTitle = (item.title || item.name || item.subject || '').trim();
-  const brand = (item.brand || item.brand_title || '').trim();
+  const rawTitle = (item.subject || item.title || item.name || '').toString().trim();
+  const brand = (item.brand || item.brand_title || '').toString().trim();
   const title = (rawTitle.length > 3 ? rawTitle : (slug.length > 5 ? slug : (brand || `Articolo #${index + 1}`)));
 
-  const rawPrice = item.price_numeric ?? parseFloat(String(item.price || item.total_item_price || '0').replace(',', '.'));
+  let rawPrice = item.price_numeric;
+  if (rawPrice === undefined || rawPrice === null) {
+    const rawPriceVal = item.features_price_values || item.price || item.total_item_price || item.price_value || '0';
+    const cleaned = String(rawPriceVal).replace(/[^\d.,]/g, '').replace(',', '.');
+    rawPrice = parseFloat(cleaned);
+  }
   const price = isNaN(rawPrice) ? 0 : rawPrice;
   const currency = item.currency || 'EUR';
 
-  const desc = (item.description || item.body || '').trim();
+  const desc = (item.body || item.description || '').toString().trim();
 
   // Extract all photos available
   const rawPhotos = item.photos || item.images || [];
@@ -204,6 +222,7 @@ function applyDeterministicFilters(
   context?: { targetQuery?: string; maxPricePerGB?: number; ruleModuleId?: string }
 ): { rejected: boolean; reason: string | null; formFactor?: AiInspectionVerdict['formFactor'] } {
   const fullText = `${item.title} ${item.description} ${item.brand} ${item.url}`.toLowerCase();
+  const ruleModuleId = context?.ruleModuleId || 'ram';
 
   // 1. Invalid or missing price
   if (item.price <= 0) {
@@ -214,31 +233,47 @@ function applyDeterministicFilters(
     };
   }
 
-  // 2. Hardware generation check (if DDR5 target)
-  const isDdr5Target = context?.ruleModuleId === 'ram_ddr5' || (context?.targetQuery && /ddr5/i.test(context.targetQuery));
-  if (isDdr5Target) {
-    const hasDdr5 = /\bddr5\b/i.test(fullText);
-    const hasOlderDdr = /\b(ddr4|ddr3|ddr2|pc3200|pc2700|pc-3200)\b/i.test(fullText);
-    if (hasOlderDdr && !hasDdr5) {
+  // 2. NVMe specific deterministic filters
+  const isNvmeTarget = ruleModuleId === 'nvme' || (context?.targetQuery && /nvme|ssd/i.test(context.targetQuery));
+  if (isNvmeTarget) {
+    // Mechanical HDD or empty enclosure detection
+    const nonSsdMatch = fullText.match(/\b(hdd|hard disk meccanico|disco meccanico|disco rigido meccanico|enclosure vuoto|box vuoto|solo custodia|solo case|solo scatola)\b/i);
+    if (nonSsdMatch) {
       return {
         rejected: true,
-        reason: 'Filtro rapido: rilevata generazione precedente (DDR4/DDR3/DDR2)',
-        formFactor: 'UNKNOWN'
+        reason: `Filtro rapido: rilevato componente non SSD NVMe ("${nonSsdMatch[0]}")`,
+        formFactor: 'ACCESSORY_OTHER'
       };
     }
   }
 
-  // 3. Obvious accessories / non-RAM hardware
-  const accessoryMatch = fullText.match(/\b(adattatore|adapter|cover|dissipatore|heatsink|cavo|connettore|case|alimentatore|scheda madre|motherboard|pc completo|computer fisso completo)\b/i);
-  if (accessoryMatch) {
-    return {
-      rejected: true,
-      reason: `Filtro rapido: accessorio o componente non RAM rilevato ("${accessoryMatch[0]}")`,
-      formFactor: 'ACCESSORY_OTHER'
-    };
+  // 3. RAM specific generation & accessory checks (only when evaluating RAM)
+  const isRamTarget = ruleModuleId === 'ram' || ruleModuleId === 'ram_ddr5';
+  if (isRamTarget) {
+    const isDdr5Target = ruleModuleId === 'ram_ddr5' || (context?.targetQuery && /ddr5/i.test(context.targetQuery));
+    if (isDdr5Target) {
+      const hasDdr5 = /\bddr5\b/i.test(fullText);
+      const hasOlderDdr = /\b(ddr4|ddr3|ddr2|pc3200|pc2700|pc-3200)\b/i.test(fullText);
+      if (hasOlderDdr && !hasDdr5) {
+        return {
+          rejected: true,
+          reason: 'Filtro rapido: rilevata generazione precedente (DDR4/DDR3/DDR2)',
+          formFactor: 'UNKNOWN'
+        };
+      }
+    }
+
+    const accessoryMatch = fullText.match(/\b(adattatore|adapter|cover|dissipatore|heatsink|cavo|connettore|case|alimentatore|scheda madre|motherboard|pc completo|computer fisso completo)\b/i);
+    if (accessoryMatch) {
+      return {
+        rejected: true,
+        reason: `Filtro rapido: accessorio o componente non RAM rilevato ("${accessoryMatch[0]}")`,
+        formFactor: 'ACCESSORY_OTHER'
+      };
+    }
   }
 
-  // 4. Rule-defined keyword filters (e.g. SO-DIMM, laptop, etc.)
+  // 4. Rule-defined keyword filters
   if (filters?.exclude_keywords && Array.isArray(filters.exclude_keywords)) {
     for (const kw of filters.exclude_keywords) {
       const lowerKw = kw.toLowerCase().trim();
@@ -259,7 +294,7 @@ function applyDeterministicFilters(
     }
   }
 
-  // 5. Exclude non-standard capacities
+  // 5. Exclude non-standard capacities (e.g. 12GB for RAM)
   if (filters?.exclude_capacities_gb && Array.isArray(filters.exclude_capacities_gb)) {
     for (const cap of filters.exclude_capacities_gb) {
       const capPattern = new RegExp(`\\b${cap}\\s*(?:gb|go|g)\\b`, 'i');
@@ -280,41 +315,43 @@ function applyDeterministicFilters(
       if (regex.test(fullText)) {
         return {
           rejected: true,
-          reason: `Filtro deterministico JSON: rilevato Part Number laptop/non conforme (prefisso "${pfx}")`,
+          reason: `Filtro deterministico JSON: rilevato Part Number non conforme (prefisso "${pfx}")`,
           formFactor: 'SODIMM_LAPTOP'
         };
       }
     }
   }
 
-  // 7. Preliminary Price/GB check if capacity is explicitly stated in text
-  const maxPricePerGB = context?.maxPricePerGB || 10;
-  let preliminaryCapacityGB: number | null = null;
+  // 7. Preliminary Price/GB check for RAM only (SSD NVMe have vastly different €/GB ratios)
+  if (isRamTarget) {
+    const maxPricePerGB = context?.maxPricePerGB || 10;
+    let preliminaryCapacityGB: number | null = null;
 
-  const multiMatch = fullText.match(/\b(\d+)\s*(?:x|\*)\s*(\d+)\s*(?:gb|go|g)\b/i);
-  const singleMatch = fullText.match(/\b(\d+)\s*(?:gb|go)\b/i);
+    const multiMatch = fullText.match(/\b(\d+)\s*(?:x|\*)\s*(\d+)\s*(?:gb|go|g)\b/i);
+    const singleMatch = fullText.match(/\b(\d+)\s*(?:gb|go)\b/i);
 
-  if (multiMatch) {
-    const c = parseInt(multiMatch[1], 10);
-    const s = parseInt(multiMatch[2], 10);
-    if ([2, 4, 8].includes(c) && [4, 8, 16, 24, 32, 48, 64].includes(s)) {
-      preliminaryCapacityGB = c * s;
+    if (multiMatch) {
+      const c = parseInt(multiMatch[1], 10);
+      const s = parseInt(multiMatch[2], 10);
+      if ([2, 4, 8].includes(c) && [4, 8, 16, 24, 32, 48, 64].includes(s)) {
+        preliminaryCapacityGB = c * s;
+      }
+    } else if (singleMatch) {
+      const s = parseInt(singleMatch[1], 10);
+      if ([8, 16, 24, 32, 48, 64, 96, 128].includes(s)) {
+        preliminaryCapacityGB = s;
+      }
     }
-  } else if (singleMatch) {
-    const s = parseInt(singleMatch[1], 10);
-    if ([8, 16, 24, 32, 48, 64, 96, 128].includes(s)) {
-      preliminaryCapacityGB = s;
-    }
-  }
 
-  if (preliminaryCapacityGB && preliminaryCapacityGB > 0 && item.price > 0) {
-    const estPricePerGB = item.price / preliminaryCapacityGB;
-    if (estPricePerGB > maxPricePerGB * 1.05) {
-      return {
-        rejected: true,
-        reason: `Filtro rapido: prezzo unitario dichiarato (${estPricePerGB.toFixed(2)} €/GB per ${preliminaryCapacityGB}GB) supera la soglia di ${maxPricePerGB} €/GB`,
-        formFactor: 'UNKNOWN'
-      };
+    if (preliminaryCapacityGB && preliminaryCapacityGB > 0 && item.price > 0) {
+      const estPricePerGB = item.price / preliminaryCapacityGB;
+      if (estPricePerGB > maxPricePerGB * 1.05) {
+        return {
+          rejected: true,
+          reason: `Filtro rapido: prezzo unitario dichiarato (${estPricePerGB.toFixed(2)} €/GB per ${preliminaryCapacityGB}GB) supera la soglia di ${maxPricePerGB} €/GB`,
+          formFactor: 'UNKNOWN'
+        };
+      }
     }
   }
 
@@ -486,9 +523,11 @@ export async function inspectListingsWithAi(
   const normalized = items.map((it, idx) => normalizeListing(it, idx));
 
   // Determine rule module and load declarative rules
-  const ruleModuleId = options.ruleModuleId || 'ram_ddr5';
+  const ruleModuleId = options.ruleModuleId || 'nvme';
   const compRule = getComponentRule(ruleModuleId) || getComponentRule('ram');
   const globalInst = getGlobalInstructions();
+  const isNvme = ruleModuleId === 'nvme';
+  const isRam = ruleModuleId === 'ram' || ruleModuleId === 'ram_ddr5';
 
   const specificRulesText = compRule ? `[${compRule.name}]\n${compRule.rules}` : 'Applica massima cautela e verifica rigida.';
   const globalRulesText = Array.isArray(globalInst.global_instructions) 
@@ -503,8 +542,8 @@ export async function inspectListingsWithAi(
 
   logAudit(`\n[AI Inspector] ========================================`);
   logAudit(`[AI Inspector] 🚀 Inizio ispezione su ${normalized.length} annunci scaricati`);
-  logAudit(`[AI Inspector] 🎯 Target: ${options.targetQuery || 'RAM DDR5 Desktop UDIMM'} | Limite: ${maxPricePerGB} €/GB`);
-  logAudit(`[AI Inspector] ⚙️ Engine: ${baseUrl} (${model})`);
+  logAudit(`[AI Inspector] 🎯 Target: ${options.targetQuery || (isNvme ? 'SSD NVMe M.2' : 'RAM DDR5 Desktop UDIMM')}${isRam ? ` | Limite: ${maxPricePerGB} €/GB` : ''}`);
+  logAudit(`[AI Inspector] ⚙️ Engine: ${baseUrl} (${model}) | Modulo: ${ruleModuleId}`);
   if (options.apifyStats?.computeUnits !== undefined) {
     logAudit(`[AI Inspector] ⚡ Scraper Apify: ${(options.apifyStats.durationMillis ? (options.apifyStats.durationMillis / 1000).toFixed(1) + 's' : 'N/D')} | Compute Units: ${options.apifyStats.computeUnits.toFixed(4)} CU`);
   }
@@ -531,9 +570,13 @@ export async function inspectListingsWithAi(
         brand: item.brand,
         status: 'REJECTED',
         formFactor: filterResult.formFactor || 'UNKNOWN',
-        detectedGeneration: 'DDR5',
+        detectedGeneration: isNvme ? 'NVMe' : 'DDR5',
         detectedCapacityGB: null,
         detectedPartNumber: null,
+        detectedSerialNumber: null,
+        detectedModel: null,
+        smartHealth: null,
+        infoSource: 'DETERMINISTIC_RULE',
         pricePerGB: null,
         rejectionReason: filterResult.reason,
         evidence: 'Scartato istantaneamente tramite pre-filtro deterministico (Fase 2)',
@@ -561,9 +604,13 @@ export async function inspectListingsWithAi(
         brand: extra.brand,
         status: 'REJECTED',
         formFactor: 'UNKNOWN',
-        detectedGeneration: 'DDR5',
+        detectedGeneration: isNvme ? 'NVMe' : 'DDR5',
         detectedCapacityGB: null,
         detectedPartNumber: null,
+        detectedSerialNumber: null,
+        detectedModel: null,
+        smartHealth: null,
+        infoSource: 'DETERMINISTIC_RULE',
         pricePerGB: null,
         rejectionReason: `Superato limite massimo ispezioni approfondite (ispezionati i primi ${maxInspect} candidati)`,
         evidence: 'Fuori dal lotto prioritario',
@@ -594,7 +641,61 @@ export async function inspectListingsWithAi(
   let totalAiDurationSec = 0;
 
   if (candidatesForAi.length > 0) {
-    const systemPrompt = `Sei un verificatore hardware esperto con capacità di analisi visiva/OCR avanzata.
+    let systemPrompt = '';
+
+    if (isNvme) {
+      systemPrompt = `Sei un verificatore hardware esperto specializzato in unità SSD M.2 PCIe NVMe e diagnostica disco (SMART / CrystalDiskInfo).
+
+REGOLE GLOBALI:
+${globalRulesText}
+
+REGOLE COMPONENTE:
+${specificRulesText}
+
+OBIETTIVO UTENTE:
+- Target: ${options.targetQuery || 'SSD NVMe M.2'}
+
+GERARCHIA DI PRECEDENZA DELLE FONTI (OBBLIGATORIA):
+1. FASE 1 (FOTO / OCR - MASSIMA AUTORITÀ):
+   - Esamina tutte le foto alla ricerca dell'etichetta del drive SSD M.2 o screenshot SMART (CrystalDiskInfo, Samsung Magician, smartctl).
+   - Estrai con la massima precisione possibile:
+     * detectedModel: modello esatto (es. "Samsung PM9A1", "WD Black SN770", "Crucial P3 Plus", "Micron 2300")
+     * detectedPartNumber: codice P/N o Model Code (es. "MZVL2512HCJQ-00000", "WDS500G3X0E")
+     * detectedSerialNumber: seriale S/N (es. "S676NF0R123456", "23412E801923")
+     * detectedCapacityGB: capacità (es. 512, 500, 1000, 1024, 2000, 2048)
+     * smartHealth: percentuale di salute ed eventuali ore d'uso se visibili nello screenshot SMART (es. "100% (1h uso)", "96%", "90%")
+     * formFactor: "M2_2280" | "M2_2242" | "M2_2230" | "SATA_M2" | "UNKNOWN"
+   - Se questi dati sono visibili nelle foto, usa questi dati certi e imposta infoSource su 'PHOTO_LABEL_OCR' (se da etichetta disco) o 'PHOTO_SMART' (se da schermata SMART).
+
+2. FASE 2 (FALLBACK SU TESTO/DESCRIZIONE):
+   - SOLO SE nelle foto l'etichetta è assente, parziale o illeggibile, estrai modello e capacità dal titolo e testo dell'inserzione.
+   - In questo caso imposta infoSource su 'TEXT_FALLBACK'.
+
+CRITERI DI CONVALIDA:
+- Imposta status 'ACCEPTED' per SSD M.2 NVMe PCIe validi.
+- Imposta status 'REJECTED' se si tratta di HDD meccanico, SSD SATA (2.5" o M.2 B+M key), solo box/adattatore vuoto o prodotto non conforme.
+
+RISPONDI ESCLUSIVAMENTE IN JSON:
+{
+  "results": [
+    {
+      "listingId": "string",
+      "status": "ACCEPTED" | "REJECTED",
+      "formFactor": "M2_2280" | "M2_2242" | "M2_2230" | "SATA_M2" | "UNKNOWN",
+      "detectedGeneration": "NVMe" | "SATA" | "OTHER",
+      "detectedModel": "string o null",
+      "detectedPartNumber": "string o null",
+      "detectedSerialNumber": "string o null",
+      "detectedCapacityGB": number o null,
+      "smartHealth": "string o null",
+      "infoSource": "PHOTO_LABEL_OCR" | "PHOTO_SMART" | "PHOTO_VISION" | "TEXT_FALLBACK",
+      "rejectionReason": "string o null se ACCEPTED",
+      "evidence": "prova con riferimento alla foto o al testo"
+    }
+  ]
+}`;
+    } else {
+      systemPrompt = `Sei un verificatore hardware esperto con capacità di analisi visiva/OCR avanzata.
 Determina per ciascun annuncio se si tratta di memoria RAM Desktop (UDIMM / DIMM a 288 pin) o laptop (SO-DIMM a 262 pin) e verifica capacità (GB) e prezzo unitario.
 
 REGOLE GLOBALI:
@@ -632,6 +733,7 @@ RISPONDI ESCLUSIVAMENTE IN JSON:
     }
   ]
 }`;
+    }
 
     // Split candidates into small chunks of 3 items
     const chunkSize = isVisionModel ? 3 : 10;
@@ -664,7 +766,7 @@ RISPONDI ESCLUSIVAMENTE IN JSON:
       if (isVisionModel) {
         const imageFetchPromises: Promise<{ itemId: string; pIdx: number; base64: string | null }>[] = [];
         for (const item of chunk) {
-          const photosToDownload = item.photoUrls.slice(0, 2);
+          const photosToDownload = item.photoUrls.slice(0, 3);
           photosToDownload.forEach((pUrl, pIdx) => {
             imageFetchPromises.push(
               fetchImageAsBase64(pUrl).then(base64 => ({ itemId: item.id, pIdx, base64 }))
@@ -726,24 +828,38 @@ RISPONDI ESCLUSIVAMENTE IN JSON:
     const capacityGB = typeof aiVerdict.detectedCapacityGB === 'number' ? aiVerdict.detectedCapacityGB : null;
     const pricePerGB = capacityGB && cand.price > 0 ? (cand.price / capacityGB) : (typeof aiVerdict.pricePerGB === 'number' ? aiVerdict.pricePerGB : null);
 
-    const isStrictDesktop = aiVerdict.formFactor === 'UDIMM_DESKTOP' && 
-      !/sodimm|so-dimm|so dimm|laptop|notebook|portatile/i.test(aiVerdict.evidence || '') &&
-      !/sodimm|so-dimm|so dimm|laptop|notebook|portatile/i.test(aiVerdict.detectedPartNumber || '');
-
-    const status: 'ACCEPTED' | 'REJECTED' = (aiVerdict.status === 'ACCEPTED' && isStrictDesktop && capacityGB !== null && (!pricePerGB || pricePerGB <= maxPricePerGB)) 
-      ? 'ACCEPTED' 
-      : 'REJECTED';
-
+    let status: 'ACCEPTED' | 'REJECTED' = 'REJECTED';
     let rejectionReason = aiVerdict.rejectionReason;
-    if (!rejectionReason && status === 'REJECTED') {
-      if (!isStrictDesktop || aiVerdict.formFactor === 'SODIMM_LAPTOP') {
-        rejectionReason = 'Modulo compatto SO-DIMM per notebook/laptop identificato da foto/OCR';
-      } else if (capacityGB === null) {
-        rejectionReason = 'Capacità in GB non verificabile con certezza dal testo o dall\'etichetta';
-      } else if (pricePerGB && pricePerGB > maxPricePerGB) {
-        rejectionReason = `Prezzo unitario ${pricePerGB.toFixed(2)} €/GB superiore alla soglia di ${maxPricePerGB} €/GB`;
-      } else {
-        rejectionReason = 'Non conforme ai requisiti o specifiche desktop non verificate';
+
+    if (isNvme) {
+      const isNvmeValid = aiVerdict.formFactor !== 'SATA_M2' && aiVerdict.formFactor !== 'ACCESSORY_OTHER' && aiVerdict.detectedGeneration !== 'SATA';
+      status = (aiVerdict.status === 'ACCEPTED' && isNvmeValid) ? 'ACCEPTED' : 'REJECTED';
+      if (!rejectionReason && status === 'REJECTED') {
+        if (aiVerdict.formFactor === 'SATA_M2' || aiVerdict.detectedGeneration === 'SATA') {
+          rejectionReason = 'SSD SATA rilevato (non conforme a standard PCIe NVMe M-Key)';
+        } else {
+          rejectionReason = 'Non conforme ai requisiti SSD NVMe o specifiche non verificate';
+        }
+      }
+    } else {
+      const isStrictDesktop = aiVerdict.formFactor === 'UDIMM_DESKTOP' && 
+        !/sodimm|so-dimm|so dimm|laptop|notebook|portatile/i.test(aiVerdict.evidence || '') &&
+        !/sodimm|so-dimm|so dimm|laptop|notebook|portatile/i.test(aiVerdict.detectedPartNumber || '');
+
+      status = (aiVerdict.status === 'ACCEPTED' && isStrictDesktop && capacityGB !== null && (!pricePerGB || pricePerGB <= maxPricePerGB)) 
+        ? 'ACCEPTED' 
+        : 'REJECTED';
+
+      if (!rejectionReason && status === 'REJECTED') {
+        if (!isStrictDesktop || aiVerdict.formFactor === 'SODIMM_LAPTOP') {
+          rejectionReason = 'Modulo compatto SO-DIMM per notebook/laptop identificato da foto/OCR';
+        } else if (capacityGB === null) {
+          rejectionReason = 'Capacità in GB non verificabile con certezza dal testo o dall\'etichetta';
+        } else if (pricePerGB && pricePerGB > maxPricePerGB) {
+          rejectionReason = `Prezzo unitario ${pricePerGB.toFixed(2)} €/GB superiore alla soglia di ${maxPricePerGB} €/GB`;
+        } else {
+          rejectionReason = 'Non conforme ai requisiti o specifiche desktop non verificate';
+        }
       }
     }
 
@@ -753,12 +869,16 @@ RISPONDI ESCLUSIVAMENTE IN JSON:
       url: cand.url,
       price: cand.price,
       currency: cand.currency,
-      brand: cand.brand,
+      brand: cand.brand || (aiVerdict.detectedModel ? aiVerdict.detectedModel.split(' ')[0] : 'N/D'),
       status,
-      formFactor: aiVerdict.formFactor || 'UNKNOWN',
-      detectedGeneration: aiVerdict.detectedGeneration || 'DDR5',
+      formFactor: aiVerdict.formFactor || (isNvme ? 'M2_2280' : 'UNKNOWN'),
+      detectedGeneration: aiVerdict.detectedGeneration || (isNvme ? 'NVMe' : 'DDR5'),
       detectedCapacityGB: capacityGB,
       detectedPartNumber: aiVerdict.detectedPartNumber || null,
+      detectedSerialNumber: aiVerdict.detectedSerialNumber || null,
+      detectedModel: aiVerdict.detectedModel || null,
+      smartHealth: aiVerdict.smartHealth || null,
+      infoSource: aiVerdict.infoSource || (isVisionModel ? 'PHOTO_LABEL_OCR' : 'TEXT_FALLBACK'),
       pricePerGB: pricePerGB ? parseFloat(pricePerGB.toFixed(2)) : null,
       rejectionReason: status === 'ACCEPTED' ? null : rejectionReason,
       evidence: aiVerdict.evidence || (isVisionModel ? 'Verificato tramite Vision OCR' : 'Verificato tramite AI testuale'),
@@ -769,7 +889,11 @@ RISPONDI ESCLUSIVAMENTE IN JSON:
   });
 
   const accepted = finalVerdicts.filter(v => v.status === 'ACCEPTED');
-  accepted.sort((a, b) => (a.pricePerGB || 999) - (b.pricePerGB || 999));
+  if (isRam) {
+    accepted.sort((a, b) => (a.pricePerGB || 999) - (b.pricePerGB || 999));
+  } else {
+    accepted.sort((a, b) => a.price - b.price);
+  }
 
   const rejected = finalVerdicts.filter(v => v.status === 'REJECTED');
 
@@ -787,7 +911,7 @@ RISPONDI ESCLUSIVAMENTE IN JSON:
   };
 
   // Build markdown report with prominent audit log and full statistics
-  let report = `## 🤖 Report Analisi & Filtraggio Hardware\n`;
+  let report = `## 🤖 Report Analisi & Filtraggio Hardware (${compRule?.name || ruleModuleId})\n`;
   report += `- **Engine AI:** \`${baseUrl}\` | **Modello:** \`${model}\` (${isVisionModel ? 'Vision Multimodale Base64 + Normalizzazione JPEG' : 'Solo Testo'})\n`;
   report += `- **Annunci analizzati:** ${normalized.length} | **Accettati:** ${accepted.length} | **Scartati:** ${rejected.length} | **Tempo totale:** ${elapsedSecs}s\n`;
 
@@ -799,18 +923,37 @@ RISPONDI ESCLUSIVAMENTE IN JSON:
 
   report += `- **⚡ Metriche Inferenza AI (${model}):** **${totalPromptTokens.toLocaleString()} prompt tok** + **${totalCompletionTokens.toLocaleString()} completion tok** = **${metrics.totalTokens.toLocaleString()} tok totali** | Velocità: **${overallTokensPerSec} tok/s** | Tempo AI: **${metrics.totalAiDurationSec}s**\n\n`;
 
-  report += `### 🟢 Annunci Convalidati (Prezzo unitario <= ${maxPricePerGB} €/GB)\n\n`;
+  report += `### 🟢 Annunci Convalidati\n\n`;
   if (accepted.length === 0) {
     report += `_Nessun annuncio ha superato tutti i criteri di validazione per i filtri specificati._\n\n`;
   } else {
-    report += `| # | Modello / Titolo | Brand | Capacità | Prezzo | Costo Unitario | Part Number / Note | Link |\n`;
-    report += `| :-: | :--- | :--- | :-: | :-: | :-: | :--- | :--- |\n`;
-    accepted.forEach((item, i) => {
-      const pnStr = item.detectedPartNumber ? `\`${item.detectedPartNumber}\`` : (item.evidence || 'Verificato');
-      const capStr = item.detectedCapacityGB ? `${item.detectedCapacityGB} GB` : 'N/D';
-      const unitStr = item.pricePerGB ? `**${item.pricePerGB.toFixed(2)} €/GB**` : 'N/D';
-      report += `| **${i + 1}** | [${item.title}](${item.url}) | ${item.brand} | ${capStr} | **${item.price.toFixed(2)} ${item.currency}** | ${unitStr} | ${pnStr} | [Vedi su Vinted](${item.url}) |\n`;
-    });
+    if (isNvme) {
+      report += `| # | Modello / Titolo | Brand | Capacità | Seriale (S/N) | Salute SMART | Fonte Dato | Prezzo | Link |\n`;
+      report += `| :-: | :--- | :--- | :-: | :-: | :-: | :-: | :-: | :--- |\n`;
+      accepted.forEach((item, i) => {
+        const modelStr = item.detectedModel ? `**${item.detectedModel}**` : `[${item.title}](${item.url})`;
+        const pnStr = item.detectedPartNumber ? `<br>\`${item.detectedPartNumber}\`` : '';
+        const capStr = item.detectedCapacityGB ? `${item.detectedCapacityGB} GB` : 'N/D';
+        const snStr = item.detectedSerialNumber ? `\`${item.detectedSerialNumber}\`` : 'N/D';
+        const healthStr = item.smartHealth ? `🟢 ${item.smartHealth}` : 'N/D';
+        
+        let sourceBadge = '📄 Testo';
+        if (item.infoSource === 'PHOTO_LABEL_OCR') sourceBadge = '👁️ Foto Etichetta';
+        else if (item.infoSource === 'PHOTO_SMART') sourceBadge = '📊 Screenshot SMART';
+        else if (item.infoSource === 'PHOTO_VISION') sourceBadge = '👁️ Vision Foto';
+
+        report += `| **${i + 1}** | ${modelStr}${pnStr} | ${item.brand} | ${capStr} | ${snStr} | ${healthStr} | ${sourceBadge} | **${item.price.toFixed(2)} ${item.currency}** | [Vedi Annuncio](${item.url}) |\n`;
+      });
+    } else {
+      report += `| # | Modello / Titolo | Brand | Capacità | Prezzo | Costo Unitario | Part Number / Note | Link |\n`;
+      report += `| :-: | :--- | :--- | :-: | :-: | :-: | :--- | :--- |\n`;
+      accepted.forEach((item, i) => {
+        const pnStr = item.detectedPartNumber ? `\`${item.detectedPartNumber}\`` : (item.evidence || 'Verificato');
+        const capStr = item.detectedCapacityGB ? `${item.detectedCapacityGB} GB` : 'N/D';
+        const unitStr = item.pricePerGB ? `**${item.pricePerGB.toFixed(2)} €/GB**` : 'N/D';
+        report += `| **${i + 1}** | [${item.title}](${item.url}) | ${item.brand} | ${capStr} | **${item.price.toFixed(2)} ${item.currency}** | ${unitStr} | ${pnStr} | [Vedi Annuncio](${item.url}) |\n`;
+      });
+    }
     report += `\n`;
   }
 

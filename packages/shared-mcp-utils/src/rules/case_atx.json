@@ -1,6 +1,21 @@
 {
   "name": "Case PC ATX (Mid-Tower / Full-Tower / Open Frame ATX)",
   "description": "Chassis o struttura open-bench compatibile con schede madri formato ATX ed E-ATX standard",
+  "priority": 10,
+  "fast_path_triggers": [
+    "case atx",
+    "mid-tower",
+    "mid tower",
+    "full-tower",
+    "full tower",
+    "4000d",
+    "5000d",
+    "h500",
+    "h510",
+    "h7",
+    "o11 dynamic",
+    "lancool"
+  ],
   "rules": "CRITERI DI VERIFICA CASE ATX:\n- DEFINIZIONE: Definisce la compatibilità con schede madri ATX standard (305 x 244 mm) ed E-ATX. Può presentarsi sia come case chiuso tradizionale (Mid-Tower / Full-Tower) sia come struttura aperta / open frame / banchetto (es. Thermaltake Core P3/P5, XTIA Xproto-ATX, Open Benchtable BC1).\n- ACCETTA: Case chiusi o open frame in grado di ospitare schede madri ATX standard. Riconoscibili da: altezza >= 40-45 cm e/o presenza di 7, 8 o più slot di espansione PCIe posteriori o staffe PCIe su banchetto.\n- ESEMPI MODELLI NOTI:\n  * Chiusi: NZXT H5/H7/H500/H510/H710, Corsair 3000D/4000D/5000D/7000D/275R, Phanteks XT Pro/Eclipse P300/P400/P500/NV5/NV7, Cooler Master MasterCase H500/TD500, Lian Li O11 Dynamic/Lancool 216/III, Fractal Meshify 2/Define 7/North/Pop Air, Be Quiet Pure Base 500.\n  * Aperti/Open Frame: Thermaltake Core P3/P5/P7, XTIA Xproto-ATX, Open Benchtable BC1, DimasTech Easy V3.0.\n- SCARTA: Case compatti Micro-ATX dedicati (max 4 slot PCIe) o Mini-ITX/SFF (1-3 slot PCIe) che NON supportano schede madri ATX da 305 mm.\n- SCARTA: Borse laptop, ventole sfuse e accessori.",
   "deterministic_filters": {
     "exclude_keywords": [

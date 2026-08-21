@@ -1,31 +1,13 @@
 {
   "name": "Case PC (Generico)",
   "description": "Regola unificata per tutti i formati (ATX, Micro-ATX, Mini-ITX) e tipologie strutturali (Chiuso / Open Frame / Banchetto)",
-  "rules": "L'utente sta specificamente cercando: [{{user_target_specs}}].\n\nMATRICE DI CLASSIFICAZIONE A 2 DIMENSIONI INDIPENDENTI (ORTOGONALI):\n1. DIMENSIONE 1: TIPOLOGIA STRUTTURALE (Chiuso vs Aperto)\n   - CASE CHIUSO: Chassis convenzionale con telaio perimetrale e paratie laterali (vetro temperato, mesh forata o alluminio/acciaio pieno). Es. Mid-Tower, Mini-Tower, Cubo chiuso, Sandwich SFF.\n   - CASE APERTO / OPEN BENCH: Struttura 'Open Frame' o 'Banchetto da test/esposizione' nativamente priva di paratie perimetrali chiuse (es. Open Benchtable, XTIA Xproto, Thermaltake Core P-series, DimasTech, telai in estruso di alluminio).\n   - NOTA: L'essere 'Open Bench' NON è alternativo ad ATX/mATX/ITX: un banchetto/open frame ha sempre una compatibilità di scheda madre (es. Open Benchtable ATX, Hydra Mini ITX).\n\n2. DIMENSIONE 2: FORM FACTOR SCHEDA MADRE SUPPORTATA\n   - ATX / E-ATX: Supporta schede madri standard ATX (305 x 244 mm). Riconoscibile da >= 7 slot PCIe posteriori (o predisposizione piastra per 7 slot nel caso open frame/banchetto).\n   - Micro-ATX (mATX): Supporta schede madri mATX (244 x 244 mm). Riconoscibile da 4 o 5 slot PCIe posteriori.\n   - Mini-ITX (ITX / SFF): Supporta schede madri compatte ITX (170 x 170 mm). Riconoscibile da 1-3 slot PCIe posteriori e volume ultra-compatto (< 20 litri).\n\n3. SCARTO DETERMINISTICO FALSI POSITIVI:\n   - SCARTA: Borse/custodie per notebook (es. 'Case Logic', borse neoprene), ventole per PC sfuse ('case fan'), cavi/adattatori, supporti rialzati da scrivania senza attacchi motherboard, case danneggiati con paratie mancanti spacciati per aperti.",
-  "deterministic_filters": {
-    "exclude_keywords": [
-      "case logic",
-      "custodia pc",
-      "custodia porta pc",
-      "borsa pc",
-      "borsa porta pc",
-      "sleeve",
-      "sacoche",
-      "porta pc rialzato",
-      "supporto monitor",
-      "stand pc",
-      "ventola pc",
-      "ventola 120mm",
-      "ventola 140mm",
-      "case fan",
-      "ventilateur pc",
-      "luefter",
-      "filtro antipolvere",
-      "griglia ventola",
-      "cavo riser",
-      "pasta termica",
-      "cover tastiera",
-      "vetro ricambio"
-    ]
-  }
+  "priority": 1,
+  "fast_path_triggers": [
+    "case pc",
+    "case computer",
+    "chassis pc",
+    "cabinet pc",
+    "case desktop"
+  ],
+  "rules": "CRITERI DI VERIFICA CASE PC:\n- DEFINIZIONE: Telaio o chassis progettato per alloggiare i componenti di un computer (scheda madre, alimentatore, GPU, storage).\n- ACCETTA: Case chiusi o strutture aperte/banchetti di test per PC desktop conformi agli standard ATX, Micro-ATX o Mini-ITX.\n- SCARTA: Borse per notebook, custodie morbide, cover per smartphone, ventole sfuse e accessori non chassis."
 }

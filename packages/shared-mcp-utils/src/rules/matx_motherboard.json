@@ -1,5 +1,19 @@
 {
   "name": "Scheda Madre Micro-ATX (mATX)",
   "description": "Schede madri con fattore di forma compatto Micro-ATX",
+  "priority": 10,
+  "fast_path_triggers": [
+    "scheda madre",
+    "motherboard",
+    "mobo",
+    "b650m",
+    "b550m",
+    "b450m",
+    "a620m",
+    "z790m",
+    "b760m",
+    "matx",
+    "micro-atx"
+  ],
   "rules": "FORM FACTOR:\n- ACCETTA: Schede madri Micro-ATX / mATX (dimensioni fino a 244 x 244 mm, tipicamente 4 slot PCIe e 4 slot RAM).\n- SCARTA: Mini-ITX (troppo piccole, 170 x 170 mm, max 1 slot PCIe e 2 slot RAM) e schede ATX / E-ATX standard (superiori a 244 mm di altezza)."
 }

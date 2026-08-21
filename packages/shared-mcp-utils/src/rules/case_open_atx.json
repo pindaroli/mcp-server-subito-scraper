@@ -1,7 +1,19 @@
 {
   "name": "Case PC Open Frame ATX (Open Bench ATX / E-ATX)",
   "description": "Struttura aperta / banchetto da test / telaio open-air specificamente per schede madri ATX ed E-ATX standard (305x244 mm)",
-  "rules": "L'utente cerca specificamente: [Open Frame ATX / Banchetto ATX].\n\nCRITERI DI VERIFICA CASE APERTO ATX (INTERSEZIONE DI 2 CRITERI):\n1. CRITERIO STRUTTURALE (OPEN FRAME / BANCHETTO):\n   - ACCETTA: Solo strutture progettate nativamente aperte a giorno (Open Frame, Bench Table da banco, telai aperti in profilati di alluminio o pannelli verticali a vista).\n   - SCARTA: Case chiusi tradizionali ATX (es. Corsair 4000D/5000D, NZXT H5/H7, Phanteks XT Pro, Fractal Meshify anche se privi temporaneamente di paratia).\n   - SCARTA: Supporti da pavimento su ruote o ripiani scrivania privi di piastra e distanziali per scheda madre.\n\n2. CRITERIO FORM FACTOR (ATX / E-ATX):\n   - ACCETTA: Strutture in grado di alloggiare schede madri formato ATX standard (305 x 244 mm) o E-ATX, con supporto/staffa per >= 7 slot di espansione PCIe e alimentatori ATX standard.\n   - SCARTA: Banchetti o telai aperti ultra-compatti dedicati esclusivamente a Mini-ITX (es. XTIA Xproto-Mini, Hydra Mini, Open Benchtable BC1 Mini).\n\n3. MODELLI DI RIFERIMENTO CONFERMATI:\n   - Open Benchtable BC1 (Full Size)\n   - Thermaltake Core P3 / Core P5 / Core P7 / Core P8 / Core P90 (in configurazione aperta)\n   - XTIA Xproto-ATX / Xproto-L con supporto ATX\n   - DimasTech Bench/Test Table Easy V3.0 / EasyDual / Pro\n   - Hydra Desk / Hydra Open Frame ATX\n   - Telai modulari in estruso di alluminio 2020/2040 per schede madri ATX\n   - QDIY Professional Open Frame ATX (acrilico / alluminio)",
+  "priority": 20,
+  "fast_path_triggers": [
+    "open frame atx",
+    "open bench atx",
+    "banchetto atx",
+    "core p3",
+    "core p5",
+    "core p7",
+    "open benchtable",
+    "bc1",
+    "streacom da6"
+  ],
+  "rules": "L'utente cerca specificamente: [Open Frame ATX / Banchetto ATX].\n\nCRITERI DI VERIFICA CASE APERTO ATX (INTERSEZIONE DI 2 CRITERI):\n1. CRITERIO STRUTTURALE (OPEN FRAME / BANCHETTO):\n   - ACCETTA: Solo strutture aperte da banco, telai modulari a giorno, pareti open-frame a parete/tavolo o banchetti di test privi di paratie laterali/frontali chiuse convenzionali.\n   - SCARTA: Case chiusi Mid-Tower o Full-Tower convenzionali (es. Corsair 4000D, NZXT H5/H7, Lian Li O11 Dynamic chiuso).\n   - SCARTA: Case chiusi a cui è stato semplicemente rimosso il pannello in vetro temperato o metallico.\n\n2. CRITERIO FORM FACTOR (ATX / E-ATX):\n   - ACCETTA: Strutture aperte che supportano nativamente schede madri formato ATX standard (305 x 244 mm) o E-ATX con almeno 7-8 slot PCIe.\n   - SCARTA: Banchetti o open frame compatti progettati esclusivamente per Mini-ITX (170x170 mm, es. XTIA Xproto Mini, Hydra Mini) che NON alloggiano schede ATX.\n\n3. MODELLI DI RIFERIMENTO CONFERMATI:\n   - Thermaltake Core P3 / Core P5 / Core P7 (Open Frame / Wall Mount ATX)\n   - Open Benchtable BC1 (Full size ATX)\n   - XTIA Xproto-ATX / Xproto-L\n   - Hydra ATX / Hydra Desk open parts\n   - DimasTech Easy V3.0 / DimasTech bench ATX\n   - QDIY Professional Open Bench ATX / PC-D60\n   - Telai aperti per mining/bench ATX in profili 2020 con supporto 7+ slot",
   "deterministic_filters": {
     "require_keywords": [
       "open",
@@ -10,22 +22,15 @@
       "banchetto",
       "aperto",
       "telaio",
-      "bc1",
       "core p3",
       "core p5",
-      "core p7",
-      "core p",
-      "dimastech",
-      "xproto-atx",
-      "hydra"
+      "benchtable"
     ],
     "exclude_keywords": [
-      "mid-tower",
-      "mid tower",
-      "full-tower",
-      "full tower",
-      "mini-itx only",
+      "mini-itx",
+      "mini itx",
       "itx only",
+      "sff only",
       "custodia",
       "borsa",
       "case logic",

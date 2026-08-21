@@ -1,7 +1,16 @@
 {
   "name": "Case PC Open Frame Micro-ATX (Open Bench mATX)",
   "description": "Struttura aperta / banchetto da test / telaio open-air compatto per schede madri Micro-ATX (244x244 mm)",
-  "rules": "L'utente cerca specificamente: [Open Frame Micro-ATX / Banchetto mATX].\n\nCRITERI DI VERIFICA CASE APERTO MICRO-ATX (INTERSEZIONE DI 2 CRITERI):\n1. CRITERIO STRUTTURALE (OPEN FRAME / BANCHETTO):\n   - ACCETTA: Solo strutture aperte a giorno, telai a vista, banchetti da banco o supporti aperti privi di paratie laterali chiuse convenzionali.\n   - SCARTA: Case chiusi Micro-ATX (es. ASUS Prime AP201, Cooler Master MasterBox Q300L, Thermaltake Versa H16/H18 chiusi).\n   - SCARTA: Case chiusi tradizionali con una sola paratia rimossa.\n\n2. CRITERIO FORM FACTOR (MICRO-ATX / mATX):\n   - ACCETTA: Strutture aperte o banchetti progettati per ospitare schede madri Micro-ATX (fino a 244 x 244 mm), con alloggiamento per 4 o 5 slot di espansione PCIe.\n   - SCARTA: Banchetti ultra-compatti esclusivi per Mini-ITX che non hanno spazio/staffe sufficienti per una scheda da 244 mm.\n\n3. MODELLI DI RIFERIMENTO CONFERMATI:\n   - DimasTech Mini / Bench Table Easy mATX\n   - QDIY Open Frame Micro-ATX (PC-D.003 / acrilico / alluminio)\n   - Banchetti modulari in profilati di alluminio 2020 compatti per schede mATX\n   - Open Benchtable BC1 (in configurazione media mATX)\n   - Hydra Open Frame compatibili mATX",
+  "priority": 20,
+  "fast_path_triggers": [
+    "open frame matx",
+    "open bench matx",
+    "banchetto matx",
+    "banchetto micro-atx",
+    "banchetto micro atx",
+    "hydra matx"
+  ],
+  "rules": "L'utente cerca specificamente: [Open Frame Micro-ATX / Banchetto mATX].\n\nCRITERI DI VERIFICA CASE APERTO MICRO-ATX (INTERSEZIONE DI 2 CRITERI):\n1. CRITERIO STRUTTURALE (OPEN FRAME / BANCHETTO):\n   - ACCETTA: Solo banchetti da test, chassis open air, telai a giorno o strutture verticali aperte prive di paratie laterali chiuse convenzionali.\n   - SCARTA: Case chiusi tradizionali Micro-ATX (es. ASUS AP201, Q300L, Pop Mini, Versa H16 chiusi).\n   - SCARTA: Case chiusi usati o a cui manca accidentalmente il pannello in vetro/metallo.\n\n2. CRITERIO FORM FACTOR (MICRO-ATX / mATX):\n   - ACCETTA: Strutture aperte progettate per accogliere schede madri Micro-ATX (244 x 244 mm) con supporto per 4-5 slot PCIe.\n   - SCARTA: Banchetti open frame ultra-compatti esclusivi per Mini-ITX (170x170 mm) che non alloggiano schede mATX da 244 mm.\n   - SCARTA: Banchetti enormi progettati espressamente per formati ATX/E-ATX.\n\n3. MODELLI DI RIFERIMENTO CONFERMATI:\n   - Hydra mATX / Open Frame Micro-ATX\n   - Banchetti da test modulari QDIY per schede Micro-ATX\n   - DimasTech Mini / Test Bench mATX\n   - Telai aperti verticali artigianali o commerciali in alluminio 2020 con dima fori mATX",
   "deterministic_filters": {
     "require_keywords": [
       "open",
@@ -9,22 +18,19 @@
       "bench",
       "banchetto",
       "aperto",
-      "telaio",
-      "dimastech",
-      "qdiy",
-      "bc1"
+      "telaio"
     ],
     "exclude_keywords": [
-      "mid-tower",
-      "mid tower",
       "full-tower",
       "full tower",
+      "e-atx",
+      "eatx",
       "custodia",
       "borsa",
       "case logic",
       "sleeve",
       "ventola",
-      "case fan"
+      "fan"
     ]
   }
 }

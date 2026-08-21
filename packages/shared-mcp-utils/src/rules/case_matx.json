@@ -1,6 +1,18 @@
 {
   "name": "Case PC Micro-ATX (mATX / Mini-Tower / Open Frame mATX)",
   "description": "Chassis o banchetto compatto compatibile con schede madri Micro-ATX (mATX fino a 244x244 mm)",
+  "priority": 10,
+  "fast_path_triggers": [
+    "case matx",
+    "case micro-atx",
+    "case micro atx",
+    "case m-atx",
+    "ap201",
+    "q300l",
+    "versa h16",
+    "versa h15",
+    "pop mini"
+  ],
   "rules": "CRITERI DI VERIFICA CASE MICRO-ATX (mATX):\n- DEFINIZIONE: Definisce la compatibilità con schede madri Micro-ATX (fino a 244 x 244 mm). Può essere sia uno chassis chiuso (Mini-Tower / Cubo) sia una struttura aperta / banchetto da banco.\n- ACCETTA: Case chiusi o open frame progettati per schede madri Micro-ATX. Riconoscibili da: formato compatto, altezza tipicamente tra 35 e 40 cm, esattamente 4 o 5 slot di espansione PCIe posteriori o staffe PCIe su telaio.\n- ESEMPI MODELLI NOTI:\n  * Chiusi: ASUS Prime AP201, Cooler Master MasterBox Q300L / NR400, Thermaltake Versa H15/H16/H17/H18, Fractal Pop Mini / Define Mini, Jonsbo D30/D31, InWin 301, Montech Air 100, Mars Gaming MC-X2.\n  * Aperti/Open Frame: Banchetti mATX in alluminio/acrilico, QDIY mATX, DimasTech Mini.\n- SCARTA: Case Full-Tower o Mid-Tower ATX grandi (7+ slot PCIe) se l'utente cerca un form factor compatto mATX dedicato.\n- SCARTA: Case Mini-ITX ultra-compatti (< 20 litri, max 2 slot PCIe) incompatibili con schede Micro-ATX da 244 mm.\n- SCARTA: Borse laptop, ventole sfuse e accessori.",
   "deterministic_filters": {
     "exclude_keywords": [

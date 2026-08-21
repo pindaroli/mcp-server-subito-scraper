@@ -1,22 +1,11 @@
 {
   "name": "Case PC Chiuso (Standard Chassis / Torre / Cubo)",
   "description": "Chassis per PC tradizionale chiuso con pannelli laterali (metallo/mesh/vetro temperato)",
-  "rules": "CRITERI DI VERIFICA CASE CHIUSO:\n- ACCETTA: Case per PC con struttura chiusa perimetrale, paratie laterali presenti (vetro temperato, metallo solido o mesh forata), alloggiamento per scheda madre interno e alloggiamento PSU.\n- TIPOLOGIE INCLUSE: Full-Tower, Mid-Tower, Mini-Tower, Cubo chiuso, SFF chiuso a sandwich (es. NZXT serie H, Corsair 4000D/5000D, Cooler Master MasterBox, Fractal Design Meshify/Terra/North, Lian Li O11/Lancool, Be Quiet Pure Base, Phanteks XT Pro).\n- SCARTA: Telai aperti / banchetti da test (Open Frame, Bench Table), carrelli/supporti porta PC su ruote, borse per laptop, e case gravemente danneggiati o mancanti di entrambe le paratie laterali strutturali.",
-  "deterministic_filters": {
-    "exclude_keywords": [
-      "open frame",
-      "bench table",
-      "banchetto test",
-      "banchetto prova",
-      "open air frame",
-      "mining frame",
-      "telaio aperto",
-      "custodia",
-      "borsa",
-      "case logic",
-      "sleeve",
-      "ventola",
-      "fan"
-    ]
-  }
+  "priority": 8,
+  "fast_path_triggers": [
+    "case chiuso",
+    "chassis chiuso",
+    "torre chiusa"
+  ],
+  "rules": "CRITERI DI VERIFICA CASE CHIUSO:\n- DEFINIZIONE: Case convenzionale per computer dotato di telaio e pannelli di chiusura (laterali, superiore, frontale).\n- ACCETTA: Case chiusi completi di pannelli laterali (in metallo solido, mesh traforato o vetro temperato).\n- SCARTA: Strutture aperte (Open Frame, banchetti di test, telai a giorno privi di pareti protettive).\n- SCARTA: Borse per notebook, custodie morbide e accessori."
 }

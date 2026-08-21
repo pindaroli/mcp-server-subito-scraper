@@ -1,0 +1,40 @@
+{
+  "name": "SSD NVMe M.2 (PCIe)",
+  "description": "Unità SSD M.2 PCIe NVMe (Gen3 / Gen4 / Gen5) con priorità di estrazione OCR su etichetta/foto e diagnostica SMART",
+  "priority": 10,
+  "fast_path_triggers": [
+    "nvme",
+    "m.2 pcie",
+    "m2 pcie",
+    "pcie nvme",
+    "ssd m.2",
+    "ssd m2",
+    "pm981",
+    "pm9a1",
+    "pm991",
+    "sn850",
+    "sn770",
+    "sn570",
+    "sn530",
+    "980 pro",
+    "990 pro",
+    "970 evo",
+    "kc3000",
+    "nm790",
+    "t500",
+    "p3 plus",
+    "p5 plus"
+  ],
+  "rules": "L'utente sta cercando: [{{user_target_specs}}].\n\nORDINE DI PRIORITÀ DELLE FONTI:\n1. FASE 1 (FOTO / OCR - MASSIMA PRIORITÀ):\n   - Ispeziona minuziosamente tutte le foto per individuare l'etichetta adesiva dell'SSD M.2 o screenshot a schermo (CrystalDiskInfo, Samsung Magician, smartctl, report diagnostico).\n   - Estrai con priorità assoluta: Brand, Modello commerciale, Part Number (P/N), Serial Number (S/N), Capacità in GB/TB e % di salute SMART / ore di utilizzo.\n   - Se trovi questi dati nelle foto, IGNORA eventuali discrepanze nel testo dell'inserzione e usa i dati certi rilevati dalle immagini.\n   - Imposta infoSource a 'PHOTO_LABEL_OCR' (se da etichetta disco), 'PHOTO_SMART' (se da screenshot SMART) o 'PHOTO_VISION' (se riconosciuto visivamente).\n\n2. FASE 2 (TESTO / FALLBACK):\n   - Usa il testo del titolo e della descrizione per determinare modello, capacità e specifiche SOLO SE le foto non contengono l'etichetta o sono completamente illeggibili/assenti.\n   - In questo caso imposta infoSource a 'TEXT_FALLBACK'.\n\nCRITERI DI CONVALIDA E SCARTO:\n- ACCETTA: SSD M.2 con interfaccia PCIe NVMe (connettore singolo con tacca M-Key). Form factor: M.2 2280 (standard), 2242, 2230.\n- SCARTA: SSD SATA (formato 2.5\" o M.2 SATA B+M key), hard disk meccanici (HDD), box/enclosure esterni vuoti, cavi e adattatori.\n- SMART / STATO DI SALUTE: Se l'utente richiede 'SMART' o 'stato di salute', verifica la presenza di screenshot CrystalDiskInfo o equivalente e riporta % salute e ore d'uso. Scarta dischi con stato 'A Rischio' / 'Critico' o settori danneggiati se non richiesto.",
+  "deterministic_filters": {
+    "exclude_keywords": [
+      "hdd",
+      "hard disk",
+      "meccanico",
+      "enclosure vuoto",
+      "box esterno solo",
+      "solo custodia",
+      "solo case"
+    ]
+  }
+}

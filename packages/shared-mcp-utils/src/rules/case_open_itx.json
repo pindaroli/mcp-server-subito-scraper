@@ -1,6 +1,16 @@
 {
   "name": "Case PC Open Frame Mini-ITX (Open Bench ITX / SFF)",
   "description": "Struttura aperta / banchetto da test / telaio open-air specificamente per schede madri Mini-ITX (170x170 mm)",
+  "priority": 20,
+  "fast_path_triggers": [
+    "open frame itx",
+    "open bench itx",
+    "banchetto itx",
+    "banchetto mini itx",
+    "xproto",
+    "hydra mini",
+    "bc1 mini"
+  ],
   "rules": "L'utente cerca specificamente: [Open Frame Mini-ITX / Banchetto ITX].\n\nCRITERI DI VERIFICA CASE APERTO MINI-ITX (INTERSEZIONE DI 2 CRITERI):\n1. CRITERIO STRUTTURALE (OPEN FRAME / BANCHETTO):\n   - ACCETTA: Solo strutture aperte a giorno, telai a vista, banchetti da banco o chassis aperti verticali privi di paratie laterali chiuse convenzionali.\n   - SCARTA: Case chiusi tradizionali anche se compatti (es. Cooler Master NR200 chiuso, Fractal Terra chiuso, Lian Li A4-H2O chiuso).\n   - SCARTA: Case chiusi a cui manca accidentalmente una paratia laterale.\n\n2. CRITERIO FORM FACTOR (MINI-ITX / SFF):\n   - ACCETTA: Strutture progettate per schede madri Mini-ITX (170 x 170 mm), supporto alimentatori compatti (SFX, SFX-L, Pico-PSU o Flex-ATX) e GPU montata tramite riser PCIe a sandwich o su staffa compatta.\n   - SCARTA: Banchetti open frame di grandi dimensioni progettati per schede madri ATX/E-ATX (es. Open Benchtable BC1 full size, Thermaltake Core P5/P7, DimasTech Easy).\n\n3. MODELLI DI RIFERIMENTO CONFERMATI:\n   - XTIA Xproto / Xproto-N / Xproto-L / Xproto-Mini\n   - Open Benchtable BC1 Mini\n   - Hydra Mini / Hydra ITX\n   - Streacom DA6\n   - Jonsbo MOD-3 Mini\n   - Telai aperti modulari in alluminio/acrilico per Mini-ITX (es. QDIY ITX, Telai 2020 ITX)",
   "deterministic_filters": {
     "require_keywords": [

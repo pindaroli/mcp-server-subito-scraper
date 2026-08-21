@@ -17,6 +17,8 @@ export interface DeterministicFilters {
 export interface ComponentRule {
   name?: string;
   description?: string;
+  priority?: number;
+  fast_path_triggers?: string[];
   rules: string;
   deterministic_filters?: DeterministicFilters;
 }
@@ -83,9 +85,12 @@ export function getComponentRule(moduleId: string): ComponentRule | null {
   return rule;
 }
 
-export function listAvailableModules(): Record<string, string> {
-  const modules: Record<string, string> = {};
-  
+let cachedRulesMap: Record<string, ComponentRule> | null = null;
+
+export function getAllComponentRules(): Record<string, ComponentRule> {
+  if (cachedRulesMap) return cachedRulesMap;
+
+  const rulesMap: Record<string, ComponentRule> = {};
   const scanDir = (dirPath: string) => {
     if (fs.existsSync(dirPath)) {
       const files = fs.readdirSync(dirPath);
@@ -93,8 +98,8 @@ export function listAvailableModules(): Record<string, string> {
         if (file.endsWith('.json') && file !== 'global_instructions.json') {
           const moduleId = file.replace('.json', '');
           const rule = readJsonFile(path.join(dirPath, file)) as ComponentRule;
-          if (rule && rule.name) {
-            modules[moduleId] = `${rule.name} - ${rule.description || ''}`;
+          if (rule) {
+            rulesMap[moduleId] = rule;
           }
         }
       }
@@ -109,46 +114,54 @@ export function listAvailableModules(): Record<string, string> {
     scanDir(overrideDir);
   }
 
+  cachedRulesMap = rulesMap;
+  return rulesMap;
+}
+
+export function listAvailableModules(): Record<string, string> {
+  const allRules = getAllComponentRules();
+  const modules: Record<string, string> = {};
+  for (const [id, rule] of Object.entries(allRules)) {
+    if (rule && rule.name) {
+      modules[id] = `${rule.name} - ${rule.description || ''}`;
+    }
+  }
   return modules;
 }
 
+/**
+ * Declarative Fast-Path detector:
+ * Dynamically resolves ruleModuleId by matching query against fast_path_triggers declared in rule JSON files
+ */
 export function detectRuleModuleId(query: string): string | null {
-  const q = (query || '').toLowerCase();
-  const isOpen = q.includes('open') || q.includes('bench') || q.includes('banchetto') || q.includes('telaio aperto');
-  const isItx = q.includes('itx') || q.includes('sff') || q.includes('mini-itx') || q.includes('mini itx') || q.includes('nr200') || q.includes('xproto') || q.includes('terra');
-  const isMatx = q.includes('matx') || q.includes('micro-atx') || q.includes('micro atx') || q.includes('microatx') || q.includes('m-atx') || q.includes('ap201') || q.includes('q300l') || q.includes('versa h16');
-  const isAtx = q.includes('atx') || q.includes('mid-tower') || q.includes('mid tower') || q.includes('full-tower') || q.includes('full tower') || q.includes('e-atx') || q.includes('4000d') || q.includes('5000d') || q.includes('h500') || q.includes('h510') || q.includes('h7');
-  const isCase = q.includes('case') || q.includes('chassis') || q.includes('torre') || q.includes('boitier') || q.includes('gehause') || q.includes('gabinete') || isOpen || isItx || isMatx || isAtx;
+  const q = (query || '').toLowerCase().trim();
+  if (!q) return null;
 
-  if (isOpen) {
-    if (isItx) return 'case_open_itx';
-    if (isMatx) return 'case_open_matx';
-    if (isAtx) return 'case_open_atx';
-    return 'case_open';
-  }
+  const allRules = getAllComponentRules();
 
-  if (isCase) {
-    if (isItx) return 'case_itx';
-    if (isMatx) return 'case_matx';
-    if (isAtx) return 'case_atx';
-    if (q.includes('chiuso') || q.includes('closed')) return 'case_closed';
-    return 'case_pc';
-  }
+  // Sort rules by priority descending (e.g. specialized case_open_itx before generic case_pc)
+  const sortedEntries = Object.entries(allRules).sort(([, a], [, b]) => {
+    const pA = a.priority ?? 10;
+    const pB = b.priority ?? 10;
+    return pB - pA;
+  });
 
-  if (q.includes('sfx') || q.includes('alimentatore') || q.includes('psu') || q.includes('sf750') || q.includes('sf600')) {
-    return 'psu_sfx';
-  }
+  for (const [moduleId, rule] of sortedEntries) {
+    if (!rule.fast_path_triggers || !Array.isArray(rule.fast_path_triggers)) continue;
 
-  if (q.includes('scheda madre') || q.includes('motherboard') || q.includes('mobo') || q.includes('b650m') || q.includes('b550m') || q.includes('z790m')) {
-    return 'matx_motherboard';
-  }
+    // Sort triggers by length desc (match more specific phrases first)
+    const sortedTriggers = [...rule.fast_path_triggers].sort((a, b) => b.length - a.length);
+    for (const trigger of sortedTriggers) {
+      const t = trigger.toLowerCase().trim();
+      if (!t) continue;
 
-  if (q.includes('ddr5')) {
-    return 'ram_ddr5';
-  }
-
-  if (q.includes('ram') || q.includes('ddr4') || q.includes('ddr3') || q.includes('dimm') || q.includes('sodimm') || q.includes('vengeance') || q.includes('trident')) {
-    return 'ram';
+      if (t.length <= 3) {
+        const regex = new RegExp(`\\b${t.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&')}\\b`, 'i');
+        if (regex.test(q)) return moduleId;
+      } else {
+        if (q.includes(t)) return moduleId;
+      }
+    }
   }
 
   return null;
@@ -189,8 +202,9 @@ export function decideRoutingTier(query: string, explicitModuleId?: string): Rou
   const hasPsu = /\b(alimentatore|psu|sfx)\b/i.test(q);
   const hasMobo = /\b(scheda madre|motherboard|mobo)\b/i.test(q);
   const hasRam = /\b(ram|ddr5|ddr4|dimm|sodimm)\b/i.test(q);
+  const hasStorage = /\b(nvme|ssd|m\.2|m2|disco|hard disk|crystaldisk|smart|tbw)\b/i.test(q);
 
-  const categoryMatches = [hasCase, hasPsu, hasMobo, hasRam].filter(Boolean).length;
+  const categoryMatches = [hasCase, hasPsu, hasMobo, hasRam, hasStorage].filter(Boolean).length;
   if (categoryMatches > 1) {
     return {
       tier: 'TIER_2_LLM_ROUTER',
@@ -207,13 +221,13 @@ export function decideRoutingTier(query: string, explicitModuleId?: string): Rou
     };
   }
 
-  // 4. Fast-Path univoco
+  // 4. Fast-Path univoco dichiarativo
   const fastPathModule = detectRuleModuleId(query);
   if (fastPathModule) {
     return {
       tier: 'TIER_1_FAST_PATH',
       ruleModuleId: fastPathModule,
-      reason: `Riconoscimento nominale univoco Fast-Path: ${fastPathModule}`
+      reason: `Riconoscimento nominale univoco Fast-Path da trigger JSON: ${fastPathModule}`
     };
   }
 
