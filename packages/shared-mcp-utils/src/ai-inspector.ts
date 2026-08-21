@@ -888,9 +888,52 @@ RISPONDI ESCLUSIVAMENTE IN JSON:
     };
   });
 
+/**
+ * Formats a report cell by interpolating placeholders from the verdict item
+ */
+function formatReportCell(template: string, item: AiInspectionVerdict): string {
+  let sourceBadge = '📄 Testo';
+  if (item.infoSource === 'PHOTO_LABEL_OCR') sourceBadge = '👁️ Foto Etichetta';
+  else if (item.infoSource === 'PHOTO_SMART') sourceBadge = '📊 Screenshot SMART';
+  else if (item.infoSource === 'PHOTO_VISION') sourceBadge = '👁️ Vision Foto';
+  else if (item.infoSource === 'DETERMINISTIC_RULE') sourceBadge = '⚡ Regola Rapida';
+
+  const placeholders: Record<string, string> = {
+    listingId: item.listingId || '',
+    title: item.title || '',
+    brand: item.brand || 'N/D',
+    price: item.price ? item.price.toFixed(2) : '0.00',
+    currency: item.currency || 'EUR',
+    url: item.url || '',
+    formFactor: item.formFactor || 'N/D',
+    detectedGeneration: item.detectedGeneration || 'N/D',
+    detectedCapacityGB: item.detectedCapacityGB !== null ? `${item.detectedCapacityGB}` : 'N/D',
+    detectedPartNumber: item.detectedPartNumber ? `${item.detectedPartNumber}` : '',
+    detectedSerialNumber: item.detectedSerialNumber ? `${item.detectedSerialNumber}` : 'N/D',
+    detectedModel: item.detectedModel || item.title,
+    smartHealth: item.smartHealth ? `🟢 ${item.smartHealth}` : 'N/D',
+    pricePerGB: item.pricePerGB ? item.pricePerGB.toFixed(2) : 'N/D',
+    sourceBadge,
+    evidence: item.evidence || 'Verificato'
+  };
+
+  let out = template;
+  for (const [key, val] of Object.entries(placeholders)) {
+    out = out.replace(new RegExp(`\\{${key}\\}`, 'g'), val);
+  }
+  return out;
+}
+
   const accepted = finalVerdicts.filter(v => v.status === 'ACCEPTED');
-  if (isRam) {
+  const reportConfig = compRule?.report_config;
+  const sortBy = reportConfig?.sort_by || (isRam ? 'unit_price_asc' : 'price_asc');
+
+  if (sortBy === 'unit_price_asc') {
     accepted.sort((a, b) => (a.pricePerGB || 999) - (b.pricePerGB || 999));
+  } else if (sortBy === 'unit_price_desc') {
+    accepted.sort((a, b) => (b.pricePerGB || 0) - (a.pricePerGB || 0));
+  } else if (sortBy === 'price_desc') {
+    accepted.sort((a, b) => b.price - a.price);
   } else {
     accepted.sort((a, b) => a.price - b.price);
   }
@@ -927,33 +970,46 @@ RISPONDI ESCLUSIVAMENTE IN JSON:
   if (accepted.length === 0) {
     report += `_Nessun annuncio ha superato tutti i criteri di validazione per i filtri specificati._\n\n`;
   } else {
-    if (isNvme) {
-      report += `| # | Modello / Titolo | Brand | Capacità | Seriale (S/N) | Salute SMART | Fonte Dato | Prezzo | Link |\n`;
-      report += `| :-: | :--- | :--- | :-: | :-: | :-: | :-: | :-: | :--- |\n`;
-      accepted.forEach((item, i) => {
-        const modelStr = item.detectedModel ? `**${item.detectedModel}**` : `[${item.title}](${item.url})`;
-        const pnStr = item.detectedPartNumber ? `<br>\`${item.detectedPartNumber}\`` : '';
-        const capStr = item.detectedCapacityGB ? `${item.detectedCapacityGB} GB` : 'N/D';
-        const snStr = item.detectedSerialNumber ? `\`${item.detectedSerialNumber}\`` : 'N/D';
-        const healthStr = item.smartHealth ? `🟢 ${item.smartHealth}` : 'N/D';
-        
-        let sourceBadge = '📄 Testo';
-        if (item.infoSource === 'PHOTO_LABEL_OCR') sourceBadge = '👁️ Foto Etichetta';
-        else if (item.infoSource === 'PHOTO_SMART') sourceBadge = '📊 Screenshot SMART';
-        else if (item.infoSource === 'PHOTO_VISION') sourceBadge = '👁️ Vision Foto';
+    const defaultColumns = isNvme
+      ? [
+          { header: 'Modello / Titolo', value: '**{detectedModel}**' },
+          { header: 'Brand', value: '{brand}' },
+          { header: 'Capacità', value: '{detectedCapacityGB} GB' },
+          { header: 'Seriale (S/N)', value: '`{detectedSerialNumber}`' },
+          { header: 'Salute SMART', value: '{smartHealth}' },
+          { header: 'Fonte Dato', value: '{sourceBadge}' },
+          { header: 'Prezzo', value: '**{price} {currency}**' },
+          { header: 'Link', value: '[Vedi Annuncio]({url})' }
+        ]
+      : (isRam
+        ? [
+            { header: 'Modello / Titolo', value: '[{title}]({url})' },
+            { header: 'Brand', value: '{brand}' },
+            { header: 'Capacità', value: '{detectedCapacityGB} GB' },
+            { header: 'Prezzo', value: '**{price} {currency}**' },
+            { header: 'Costo Unitario', value: '**{pricePerGB} €/GB**' },
+            { header: 'Part Number / Note', value: '`{detectedPartNumber}`' },
+            { header: 'Link', value: '[Vedi Annuncio]({url})' }
+          ]
+        : [
+            { header: 'Modello / Titolo', value: '[{title}]({url})' },
+            { header: 'Brand', value: '{brand}' },
+            { header: 'Form Factor', value: '`{formFactor}`' },
+            { header: 'Prezzo', value: '**{price} {currency}**' },
+            { header: 'Note / Prova', value: '{evidence}' },
+            { header: 'Link', value: '[Vedi Annuncio]({url})' }
+          ]);
 
-        report += `| **${i + 1}** | ${modelStr}${pnStr} | ${item.brand} | ${capStr} | ${snStr} | ${healthStr} | ${sourceBadge} | **${item.price.toFixed(2)} ${item.currency}** | [Vedi Annuncio](${item.url}) |\n`;
-      });
-    } else {
-      report += `| # | Modello / Titolo | Brand | Capacità | Prezzo | Costo Unitario | Part Number / Note | Link |\n`;
-      report += `| :-: | :--- | :--- | :-: | :-: | :-: | :--- | :--- |\n`;
-      accepted.forEach((item, i) => {
-        const pnStr = item.detectedPartNumber ? `\`${item.detectedPartNumber}\`` : (item.evidence || 'Verificato');
-        const capStr = item.detectedCapacityGB ? `${item.detectedCapacityGB} GB` : 'N/D';
-        const unitStr = item.pricePerGB ? `**${item.pricePerGB.toFixed(2)} €/GB**` : 'N/D';
-        report += `| **${i + 1}** | [${item.title}](${item.url}) | ${item.brand} | ${capStr} | **${item.price.toFixed(2)} ${item.currency}** | ${unitStr} | ${pnStr} | [Vedi Annuncio](${item.url}) |\n`;
-      });
-    }
+    const columns = (reportConfig?.columns && reportConfig.columns.length > 0)
+      ? reportConfig.columns
+      : defaultColumns;
+
+    report += `| # | ${columns.map(c => c.header).join(' | ')} |\n`;
+    report += `| :-: | ${columns.map(() => ':---').join(' | ')} |\n`;
+    accepted.forEach((item, i) => {
+      const rowValues = columns.map(c => formatReportCell(c.value, item));
+      report += `| **${i + 1}** | ${rowValues.join(' | ')} |\n`;
+    });
     report += `\n`;
   }
 

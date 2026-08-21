@@ -14,5 +14,16 @@
     "daggerm",
     "sp750"
   ],
+  "report_config": {
+    "sort_by": "price_asc",
+    "columns": [
+      { "header": "Modello Alimentatore", "value": "**{detectedModel}**" },
+      { "header": "Brand", "value": "{brand}" },
+      { "header": "Form Factor", "value": "`SFX / SFX-L`" },
+      { "header": "Prezzo", "value": "**{price} {currency}**" },
+      { "header": "Note / Evidenza", "value": "{evidence}" },
+      { "header": "Link", "value": "[Vedi Annuncio]({url})" }
+    ]
+  },
   "rules": "FORM FACTOR:\n- ACCETTA: Alimentatori in standard SFX (125 x 100 x 63.5 mm) o SFX-L (125 x 125 x 63.5 mm).\n- SCARTA: Alimentatori ATX standard (150 x 140/160 x 86 mm) e formati proprietari/TFX/Flex-ATX se non richiesti."
 }

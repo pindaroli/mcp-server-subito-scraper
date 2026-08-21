@@ -9,6 +9,17 @@
     "banchetto di test",
     "telaio aperto"
   ],
+  "report_config": {
+    "sort_by": "price_asc",
+    "columns": [
+      { "header": "Modello Open Frame", "value": "**{detectedModel}**" },
+      { "header": "Brand", "value": "{brand}" },
+      { "header": "Tipologia", "value": "`Open Frame / Banchetto`" },
+      { "header": "Prezzo", "value": "**{price} {currency}**" },
+      { "header": "Note / Evidenza", "value": "{evidence}" },
+      { "header": "Link", "value": "[Vedi Annuncio]({url})" }
+    ]
+  },
   "rules": "L'utente cerca specificamente: [Case Aperto / Open Frame / Banchetto di Test].\n\nCRITERI DI VERIFICA (Zero Assunzioni):\n- ACCETTA: Solo strutture progettate e concepite per essere aperte a giorno (Open Frame, Open Benchtable, Banchetto da test / bench, Parete attrezzata a vista). Riconoscibili da: assenza strutturale di pannelli laterali chiusi, scheda madre e componenti completamente esposti all'aria, telaio in alluminio/metallo/acrilico per montaggio rapido.\n- ESEMPI MODELLI NOTI:\n  * Thermaltake Core P1 / P3 / P5 / P7 / Core P8 (configurato aperto)\n  * XTIA Xproto / Xproto-N / Xproto-L / Xproto-ATX\n  * Open Benchtable (OBT) / Streacom BC1 / BC1 Mini\n  * Hydra Mini / Hydra Desk / Hydra ITX / Hydra mATX\n  * DimasTech Easy / Mini / Nano Bench/Test Table\n  * Streacom DA6\n  * Telai modulari aperti in profili di alluminio 2020 / Banchetti QDIY\n- SCARTA: Qualsiasi case chiuso tradizionale (Mid-Tower, Full-Tower, Cube, SFF chiuso) anche se dotato di finestra in vetro trasparente o mesh traforato.\n- SCARTA: Case a cui è stato temporaneamente rimosso il pannello laterale ma la cui struttura è chiaramente quella di un case chiuso tradizionale.\n- SCARTA: Borse, valigette, custodie chiuse e accessori.",
   "deterministic_filters": {
     "require_keywords": [

@@ -14,11 +14,22 @@ export interface DeterministicFilters {
   require_keywords?: string[];
 }
 
+export interface ReportColumn {
+  header: string;
+  value: string;
+}
+
+export interface ReportConfig {
+  sort_by?: 'price_asc' | 'price_desc' | 'unit_price_asc' | 'unit_price_desc';
+  columns?: ReportColumn[];
+}
+
 export interface ComponentRule {
   name?: string;
   description?: string;
   priority?: number;
   fast_path_triggers?: string[];
+  report_config?: ReportConfig;
   rules: string;
   deterministic_filters?: DeterministicFilters;
 }

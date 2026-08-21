@@ -15,5 +15,16 @@
     "matx",
     "micro-atx"
   ],
+  "report_config": {
+    "sort_by": "price_asc",
+    "columns": [
+      { "header": "Modello Scheda Madre", "value": "**{detectedModel}**" },
+      { "header": "Brand", "value": "{brand}" },
+      { "header": "Form Factor", "value": "`Micro-ATX (mATX)`" },
+      { "header": "Prezzo", "value": "**{price} {currency}**" },
+      { "header": "Note / Evidenza", "value": "{evidence}" },
+      { "header": "Link", "value": "[Vedi Annuncio]({url})" }
+    ]
+  },
   "rules": "FORM FACTOR:\n- ACCETTA: Schede madri Micro-ATX / mATX (dimensioni fino a 244 x 244 mm, tipicamente 4 slot PCIe e 4 slot RAM).\n- SCARTA: Mini-ITX (troppo piccole, 170 x 170 mm, max 1 slot PCIe e 2 slot RAM) e schede ATX / E-ATX standard (superiori a 244 mm di altezza)."
 }

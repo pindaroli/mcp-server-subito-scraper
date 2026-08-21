@@ -16,6 +16,17 @@
     "a4-h2o",
     "dan a4"
   ],
+  "report_config": {
+    "sort_by": "price_asc",
+    "columns": [
+      { "header": "Modello Case", "value": "**{detectedModel}**" },
+      { "header": "Brand", "value": "{brand}" },
+      { "header": "Form Factor", "value": "`Mini-ITX / SFF`" },
+      { "header": "Prezzo", "value": "**{price} {currency}**" },
+      { "header": "Note / Evidenza", "value": "{evidence}" },
+      { "header": "Link", "value": "[Vedi Annuncio]({url})" }
+    ]
+  },
   "rules": "CRITERI DI VERIFICA CASE MINI-ITX (SFF):\n- DEFINIZIONE: Definisce la compatibilità con schede madri Mini-ITX (170 x 170 mm). Può essere uno chassis compatto chiuso (Sandwich / Cubo / Tower ITX con volume < 20 litri) oppure una struttura open frame / banchetto ultra-compatto (es. XTIA Xproto Mini-ITX, Hydra Mini, Open Benchtable BC1 Mini, Streacom DA6).\n- ACCETTA: Case chiusi o open frame progettati specificamente per schede madri Mini-ITX. Riconoscibili da: volume ridotto (< 20 litri), 1, 2 o max 3 slot PCIe posteriori o riser PCIe dedicato, alimentatori compatti SFX/SFX-L/Flex-ATX.\n- ESEMPI MODELLI NOTI:\n  * Chiusi: Cooler Master NR200/NR200P, Fractal Design Terra/Ridge/Node 202, Lian Li A4-H2O/Q58, SSUPD Meshlicious, FormD T1, Dan A4-SFX, Teenage Engineering Computer-1, NZXT H1/H210, Jonsbo T8.\n  * Aperti/Open Frame: XTIA Xproto / Xproto-Mini, Hydra Mini, Open Benchtable BC1 Mini, Streacom DA6, Jonsbo MOD-3 Mini.\n- SCARTA: Case Mid-Tower, Full-Tower o case Micro-ATX standard con volume > 25-30 litri.\n- SCARTA: Borse per portatili, ventole sfuse, accessori.",
   "deterministic_filters": {
     "exclude_keywords": [

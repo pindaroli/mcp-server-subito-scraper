@@ -9,5 +9,16 @@
     "cabinet pc",
     "case desktop"
   ],
+  "report_config": {
+    "sort_by": "price_asc",
+    "columns": [
+      { "header": "Modello Case", "value": "**{detectedModel}**" },
+      { "header": "Brand", "value": "{brand}" },
+      { "header": "Form Factor / Tipo", "value": "`{formFactor}`" },
+      { "header": "Prezzo", "value": "**{price} {currency}**" },
+      { "header": "Note / Evidenza", "value": "{evidence}" },
+      { "header": "Link", "value": "[Vedi Annuncio]({url})" }
+    ]
+  },
   "rules": "CRITERI DI VERIFICA CASE PC:\n- DEFINIZIONE: Telaio o chassis progettato per alloggiare i componenti di un computer (scheda madre, alimentatore, GPU, storage).\n- ACCETTA: Case chiusi o strutture aperte/banchetti di test per PC desktop conformi agli standard ATX, Micro-ATX o Mini-ITX.\n- SCARTA: Borse per notebook, custodie morbide, cover per smartphone, ventole sfuse e accessori non chassis."
 }
